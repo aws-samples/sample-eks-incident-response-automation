@@ -49,9 +49,11 @@ def handler(event, context):
     fds = ForensicDataService(
         ddb_client=create_aws_client("dynamodb"),
         ddb_table_name=os.environ["INSTANCE_TABLE_NAME"],
-        auto_notify_subscribers=True
-        if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
-        else False,
+        auto_notify_subscribers=(
+            True
+            if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
+            else False
+        ),
         appsync_api_endpoint_url=os.environ.get(
             "APPSYNC_API_ENDPOINT", "API_NOT_ENABLED"
         ),
@@ -151,9 +153,9 @@ def handler(event, context):
         logger.error(exception_obj)
 
         output_body["errorName"] = "Error: performing attach EBS Snapshot"
-        output_body[
-            "errorDescription"
-        ] = f"Error while attaching snapshot to instance {forensic_instance_id} for forensic id:  {forensic_id} forensic investigation instance on forensic Type : {forensic_type}"
+        output_body["errorDescription"] = (
+            f"Error while attaching snapshot to instance {forensic_instance_id} for forensic id:  {forensic_id} forensic investigation instance on forensic Type : {forensic_type}"
+        )
         output_body["errorPhase"] = ForensicsProcessingPhase.INVESTIGATION.name
         output_body["errorComponentId"] = "attachEBSSnapShot"
         output_body["errorComponentType"] = "Lambda"

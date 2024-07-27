@@ -63,9 +63,9 @@ def handler(event, _):
         logger.error(exception_obj)
 
         output_body["errorName"] = "Error: Terminating Builder Instance"
-        output_body[
-            "errorDescription"
-        ] = f"Error while terminating builder instance {instance_id} instance"
+        output_body["errorDescription"] = (
+            f"Error while terminating builder instance {instance_id} instance"
+        )
         output_body["errorPhase"] = ForensicsProcessingPhase.INVESTIGATION.name
         output_body["errorComponentId"] = "terminateBuilderInstance"
         output_body["errorComponentType"] = "Lambda"

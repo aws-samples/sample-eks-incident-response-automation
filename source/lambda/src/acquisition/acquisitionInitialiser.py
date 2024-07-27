@@ -44,9 +44,11 @@ def handler(event, context):
     fds = ForensicDataService(
         ddb_client=create_aws_client("dynamodb"),
         ddb_table_name=os.environ["INSTANCE_TABLE_NAME"],
-        auto_notify_subscribers=True
-        if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
-        else False,
+        auto_notify_subscribers=(
+            True
+            if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
+            else False
+        ),
         appsync_api_endpoint_url=os.environ.get(
             "APPSYNC_API_ENDPOINT", "API_NOT_ENABLED"
         ),

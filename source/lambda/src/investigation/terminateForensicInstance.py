@@ -37,9 +37,11 @@ def handler(event, _):
     fds = ForensicDataService(
         ddb_client=create_aws_client("dynamodb"),
         ddb_table_name=table_name,
-        auto_notify_subscribers=True
-        if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
-        else False,
+        auto_notify_subscribers=(
+            True
+            if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
+            else False
+        ),
         appsync_api_endpoint_url=os.environ.get(
             "APPSYNC_API_ENDPOINT", "API_NOT_ENABLED"
         ),
@@ -88,9 +90,9 @@ def handler(event, _):
         logger.error(exception_obj)
 
         output_body["errorName"] = "Error: Terminating Forensic Instance"
-        output_body[
-            "errorDescription"
-        ] = f"Error while terminating a {forensic_type} forensic investigation instance"
+        output_body["errorDescription"] = (
+            f"Error while terminating a {forensic_type} forensic investigation instance"
+        )
         output_body["errorPhase"] = ForensicsProcessingPhase.INVESTIGATION.name
         output_body["errorComponentId"] = "terminateForensicInstance"
         output_body["errorComponentType"] = "Lambda"

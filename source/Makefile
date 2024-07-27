@@ -7,7 +7,7 @@ lock-version: virtualenv
 	@echo "Lock lambda depdency version"
 	@echo ""
 	@echo "Targets:"
-	@$(ENV_PREFIX)python  -m pip install pip-tools
+	@$(ENV_PREFIX)python -m pip install pip-tools
 	# this lock the source depdency specified in steup.py
 	pip-compile --version
 	pip-compile lambda/requirements.txt

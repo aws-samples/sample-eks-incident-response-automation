@@ -240,9 +240,9 @@ def handler(event, context):
             forensic_type = "Tools Loader"
 
             output_body["errorName"] = "Error: Creating or loading tools"
-            output_body[
-                "errorDescription"
-            ] = f"Error while performing Forensic {forensic_type} Tools loaded"
+            output_body["errorDescription"] = (
+                f"Error while performing Forensic {forensic_type} Tools loaded"
+            )
             output_body["errorPhase"] = "Forensic Tools"
             output_body["errorComponentId"] = "loadForensicTools"
             output_body["errorComponentType"] = "Lambda"

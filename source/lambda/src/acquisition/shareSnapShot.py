@@ -51,9 +51,11 @@ def handler(event, context):
     fds = ForensicDataService(
         ddb_client=create_aws_client("dynamodb"),
         ddb_table_name=os.environ["INSTANCE_TABLE_NAME"],
-        auto_notify_subscribers=True
-        if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
-        else False,
+        auto_notify_subscribers=(
+            True
+            if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
+            else False
+        ),
         appsync_api_endpoint_url=os.environ.get(
             "APPSYNC_API_ENDPOINT", "API_NOT_ENABLED"
         ),
@@ -113,12 +115,12 @@ def handler(event, context):
         }
         logger.error(exception_obj)
 
-        output_body[
-            "errorName"
-        ] = f"Error: sharing snapshot for forensic id:{forensic_id} of type {forensic_type}"
-        output_body[
-            "errorDescription"
-        ] = f"Error while sharing snapshot for forensic id:{forensic_id}t"
+        output_body["errorName"] = (
+            f"Error: sharing snapshot for forensic id:{forensic_id} of type {forensic_type}"
+        )
+        output_body["errorDescription"] = (
+            f"Error while sharing snapshot for forensic id:{forensic_id}t"
+        )
         output_body["errorPhase"] = ForensicsProcessingPhase.ACQUISITION.name
         output_body["errorComponentId"] = "shareSnapShot"
         output_body["errorComponentType"] = "Lambda"

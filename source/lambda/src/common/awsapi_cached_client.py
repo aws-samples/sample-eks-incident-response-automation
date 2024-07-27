@@ -53,6 +53,7 @@ def create_aws_client(
             role=app_account_role,
             target_region=target_region,
         )
+
         return ec2_assumerole_session.client(client_name)
 
 
@@ -144,9 +145,7 @@ class BotoSession:
         self.STS = boto3.client(
             "sts",
             config=self.boto_config,
-            endpoint_url="https://sts."
-            + self.target_region
-            + ".amazonaws.com",
+            endpoint_url="https://sts.us-east-1.amazonaws.com",
         )
         if not self.target:
             self.target = self.STS.get_caller_identity()["Account"]
@@ -165,6 +164,7 @@ class BotoSession:
                 "SecretAccessKey"
             ],
             aws_session_token=remote_account["Credentials"]["SessionToken"],
+            region_name=self.target_region
         )
 
         boto3.setup_default_session()

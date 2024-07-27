@@ -17,6 +17,7 @@
         "appForensicAliasKMS": "forensickey",
         "applicationAccounts": ["*"],
         "customerManagedCMKArns": {},
+        "secHubAccount": "058264133586",
         "ec2ForensicImage": "",
         "sandbox": true,
         "toolsAMI": {

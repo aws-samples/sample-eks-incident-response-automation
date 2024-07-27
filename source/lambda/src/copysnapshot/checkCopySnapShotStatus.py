@@ -85,12 +85,12 @@ def handler(event, context):
         }
         logger.error(exception_obj)
 
-        output_body[
-            "errorName"
-        ] = f"Error: checking snapshot copy status for forensic id{forensic_id}"
-        output_body[
-            "errorDescription"
-        ] = f"Error while checking snapshot status {forensic_type} acquisition - Instance Copy Snapshot"
+        output_body["errorName"] = (
+            f"Error: checking snapshot copy status for forensic id{forensic_id}"
+        )
+        output_body["errorDescription"] = (
+            f"Error while checking snapshot status {forensic_type} acquisition - Instance Copy Snapshot"
+        )
         output_body["errorPhase"] = ForensicsProcessingPhase.ACQUISITION.name
         output_body["errorComponentId"] = "checkCopySnapShotStatus"
         output_body["errorComponentType"] = "Lambda"

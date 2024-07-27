@@ -57,6 +57,7 @@ def setupevent(request):
         },
         "statusCode": 200,
     }
+
     # yield
     # print ('Testing Check Memory Acquisition Flow Completed')
     def teardown():

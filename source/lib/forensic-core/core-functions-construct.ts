@@ -162,6 +162,7 @@ export class ForensicsCore extends Construct {
             assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
             path: '/',
         });
+
         isolationInstanceRole.addManagedPolicy(
             ManagedPolicy.fromAwsManagedPolicyName('AWSDenyAll')
         );

@@ -41,6 +41,7 @@ def setupevent(request):
     print("Testing Attach Snapshot Started ")
 
     print(os.environ["AWS_CODEGURU_PROFILER_GROUP_NAME"])
+
     # yield
     # print ('Testing Check Forensic Investigation SSM Command Status Checker Completed')
     def teardown():

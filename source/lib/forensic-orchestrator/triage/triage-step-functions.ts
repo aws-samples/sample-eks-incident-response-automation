@@ -70,7 +70,7 @@ export class TriageOrchestratorConstruct extends Construct {
     constructor(scope: Construct, id: string, props: TriageOrchestratorProps) {
         super(scope, id);
 
-        const getInstanceInfo = new LambdaInvoke(this, 'Get Instance Info Case', {
+        const getResourceInfo = new LambdaInvoke(this, 'Get Resource Info Case', {
             lambdaFunction: props.triageInstanceLambda,
         });
 
@@ -160,7 +160,7 @@ export class TriageOrchestratorConstruct extends Construct {
             subject: `Forensic Triage completed`,
         });
 
-        const chain = Chain.start(getInstanceInfo).next(
+        const chain = Chain.start(getResourceInfo).next(
             isAcquisitionNeeded
                 .when(
                     Condition.booleanEquals('$.Payload.body.isAcquisitionRequired', true),
