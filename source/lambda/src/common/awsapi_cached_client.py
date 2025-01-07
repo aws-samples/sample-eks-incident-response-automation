@@ -164,7 +164,7 @@ class BotoSession:
                 "SecretAccessKey"
             ],
             aws_session_token=remote_account["Credentials"]["SessionToken"],
-            region_name=self.target_region
+            region_name=self.target_region,
         )
 
         boto3.setup_default_session()

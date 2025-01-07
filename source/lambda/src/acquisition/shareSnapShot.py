@@ -42,10 +42,6 @@ def handler(event, context):
     app_account_region = input_body.get("instanceRegion")
 
     forensic_id = input_body.get("forensicId")
-    snapshot_ids = input_body.get("snapshotIds")
-    snapshot_artifact_map = input_body.get("snapshotArtifactMap")
-    output_body["snapshotIdsShared"] = snapshot_ids
-    output_body["snapshotArtifactMap"] = snapshot_artifact_map
     current_account = context.invoked_function_arn.split(":")[4]
 
     fds = ForensicDataService(
@@ -62,7 +58,6 @@ def handler(event, context):
     )
 
     try:
-
         if app_account_id != current_account:
 
             ec2_client = create_aws_client(
@@ -72,6 +67,52 @@ def handler(event, context):
                 target_region=app_account_region,
                 app_account_role=app_account_role,
             )
+        if "clusterInfo" in input_body:
+            for instance_id in input_body:
+                if isinstance(input_body[instance_id], dict) and "snapshotIds" in input_body[instance_id]:
+                    instance_data = input_body[instance_id]
+                    snapshot_ids = instance_data.get("snapshotIds")
+                    snapshot_artifact_map = instance_data.get("snapshotArtifactMap")
+                    input_body[instance_id]["snapshotIdsShared"] = snapshot_ids
+                    input_body[instance_id]["snapshotArtifactMap"] = snapshot_artifact_map
+                    for snapshot_id in snapshot_ids:
+                        response = _share_snapshot(
+                            ec2_client=ec2_client,
+                            target_account_id=app_account_id,
+                            snapshot_id=snapshot_id,
+                            solution_account=current_account,
+                        )
+
+                        logger.info(response)
+
+                        fds.update_forensic_artifact(
+                            id=forensic_id,
+                            artifact_id=snapshot_artifact_map[snapshot_id],
+                            phase=ForensicsProcessingPhase.ACQUISITION,
+                            component_id="shareSnapShot",
+                            component_type="Lambda",
+                        )
+
+                        fds.add_forensic_timeline_event(
+                            id=forensic_id,
+                            name="Sharing snapshot",
+                            description="Sharing snapshot to Forensic Account",
+                            phase=ForensicsProcessingPhase.ACQUISITION,
+                            component_id="shareSnapShot",
+                            component_type="Lambda",
+                            event_data={
+                                "forensicId": forensic_id,
+                                "snapshotId": snapshot_id,
+                                "sourceAccount": app_account_id,
+                                "solutionAccount": current_account,
+                            },
+                        )
+
+        else:
+            snapshot_ids = input_body.get("snapshotIds")
+            snapshot_artifact_map = input_body.get("snapshotArtifactMap")
+            output_body["snapshotIdsShared"] = snapshot_ids
+            output_body["snapshotArtifactMap"] = snapshot_artifact_map
             for snapshot_id in snapshot_ids:
                 response = _share_snapshot(
                     ec2_client=ec2_client,

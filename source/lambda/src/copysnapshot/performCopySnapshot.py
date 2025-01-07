@@ -88,28 +88,62 @@ def handler(event, context):
             record_id=forensic_id, metadata_only=True
         )
 
-        instance_id = forensic_record.resourceId
-        output_body["instanceId"] = instance_id
-        logger.info(
-            "Taking Copy snapshot for EBS volumes {0}".format(instance_id)
-        )
-
-        copy_snapshot_ids = []
-        for snapshot in snapshot_ids:
-            snapshot_details = ec2_client.copy_snapshot(
-                Description=description,
-                Encrypted=True,
-                KmsKeyId=forensic_key_id,
-                SourceRegion=app_account_region,
-                SourceSnapshotId=snapshot,
-                TagSpecifications=[
-                    {
-                        "ResourceType": "snapshot",
-                        "Tags": [{"Key": "ForensicID", "Value": forensic_id}],
-                    }
-                ],
+        if "clusterInfo" in input_body:
+            instance_id_list = forensic_record.resourceId
+            output_body["instanceId"] = instance_id_list
+            for each_instance_id in instance_id_list:
+                if each_instance_id in input_body and "snapshotIds" in input_body[each_instance_id]:
+                    logger.info("Taking Copy snapshot for EBS volumes {0}".format(each_instance_id))
+                    copy_snapshot_ids = []
+                    for snapshot in input_body[each_instance_id]["snapshotIds"]:
+                        snapshot_details = ec2_client.copy_snapshot(
+                            Description=description,
+                            SourceSnapshotId=snapshot,
+                            Encrypted=True,
+                            KmsKeyId=forensic_key_id,
+                            SourceRegion=app_account_region,
+                            TagSpecifications=[
+                                {
+                                    "ResourceType": "snapshot",
+                                    "Tags": [{"Key": "ForensicID", "Value": forensic_id}]
+                                }
+                            ]
+                        )
+                        copy_snapshot_ids.append(snapshot_details["SnapshotId"])
+                    
+                    if each_instance_id not in output_body:
+                        output_body[each_instance_id] = {}
+                    output_body[each_instance_id]["copySnapshotIds"] = copy_snapshot_ids
+                    output_body[each_instance_id]["isCopyComplete"] = False
+        else:
+            instance_id = forensic_record.resourceId
+            output_body["instanceId"] = instance_id
+            logger.info(
+                "Taking Copy snapshot for EBS volumes {0}".format(instance_id)
             )
-            copy_snapshot_ids.append(snapshot_details.get("SnapshotId"))
+
+            copy_snapshot_ids = []
+            for snapshot in snapshot_ids:
+                snapshot_details = ec2_client.copy_snapshot(
+                    Description=description,
+                    SourceSnapshotId=snapshot,
+                    Encrypted=True,
+                    KmsKeyId=forensic_key_id,
+                    SourceRegion=app_account_region,
+                    TagSpecifications=[
+                        {
+                            "ResourceType": "snapshot",
+                            "Tags": [{"Key": "ForensicID", "Value": forensic_id}]
+                        }
+                    ]
+                )
+                copy_snapshot_ids.append(snapshot_details["SnapshotId"])
+            
+            # Keep consistent structure with cluster case
+            if instance_id not in output_body:
+                output_body[instance_id] = {}
+            output_body[instance_id]["copySnapshotIds"] = copy_snapshot_ids
+            output_body[instance_id]["isCopyComplete"] = False
 
         if is_snapshot_sharing_complete:
             output_body["app_snapshotIds"] = output_body["snapshotIds"]

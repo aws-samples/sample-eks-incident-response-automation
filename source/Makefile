@@ -1,5 +1,5 @@
 .ONESHELL:
-ENV_PREFIX=$(shell python -c "if __import__('pathlib').Path('.venv/bin/pip').exists(): print('.venv/bin/')")
+ENV_PREFIX=$(shell python3 -c "if __import__('pathlib').Path('.venv/bin/pip').exists(): print('.venv/bin/')")
 USING_POETRY=$(shell grep "tool.poetry" pyproject.toml && echo "yes")
 
 .PHONY: lock-version
@@ -7,7 +7,7 @@ lock-version: virtualenv
 	@echo "Lock lambda depdency version"
 	@echo ""
 	@echo "Targets:"
-	@$(ENV_PREFIX)python -m pip install pip-tools
+	@$(ENV_PREFIX)python3 -m pip install pip-tools
 	# this lock the source depdency specified in steup.py
 	pip-compile --version
 	pip-compile lambda/requirements.txt
@@ -25,13 +25,13 @@ show:             ## Show the current environment.
 	@echo "Current environment:"
 	@if [ "$(USING_POETRY)" ]; then poetry env info && exit; fi
 	@echo "Running using $(ENV_PREFIX)"
-	@$(ENV_PREFIX)python -V
-	@$(ENV_PREFIX)python -m site
+	@$(ENV_PREFIX)python3 -V
+	@$(ENV_PREFIX)python3 -m site
 
 .PHONY: check-py-version
-check-py-version:
-	@echo "python version require to be at least 3.9.0. Leverage pyenv to set up python environment"
-	$(ENV_PREFIX)python -c "import sys; print(sys.version_info); exit(0) if sys.version_info.major == 3 and sys.version_info.minor >= 9 and sys.version_info.minor <= 10 else exit(-1)"
+# check-py-version:
+# 	@echo "python3 version require to be at least 3.9.0. Leverage pyenv to set up python3 environment"
+# 	$(ENV_PREFIX)python3 -c "import sys; print(sys.version_info); exit(0) if sys.version_info.major == 3 and sys.version_info.minor >= 9 and sys.version_info.minor <= 10 else exit(-1)"
 	
 	
 .PHONY: install
@@ -66,7 +66,7 @@ bandit:          ## Run pep8, black, mypy linters.
 .PHONY: test
 test: lint        ## Run tests and generate coverage report.
 	cd lambda
-	PYTHONPATH=$(PYTHONPATH):$(PWD)
+	PYTHON3PATH=$(PYTHON3PATH):$(PWD)
 	cd ..
 	# remove later
 	echo ENV_PREFIX= $(ENV_PREFIX)
@@ -106,9 +106,9 @@ virtualenv: check-py-version      ## Create a virtual environment.
 	@if [ "$(USING_POETRY)" ]; then poetry install && exit; fi
 	@echo "clean up existing virtualenv ..."
 	@rm -rf .venv
-	@python_verion=$(python --version)
-	@echo "creating up existing virtualenv based on ${python_verion}..."
-	@python -m venv .venv
+	@python3_verion=$(python3 --version)
+	@echo "creating up existing virtualenv based on ${python3_verion}..."
+	@python3 -m venv .venv
 	@echo active virtual environment
 	@bash -c "source .venv/bin/activate"
 

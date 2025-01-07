@@ -231,8 +231,43 @@ def memory_investigation(
     forensic_id,
     output_body,
 ):
-    command_id = input_body["MemoryInvestigation"]["CommandId"]
-    command_id_artifact_map = input_body["MemoryInvestigation"][
+    if 'clusterInfo' in input_body:
+        for each_instance_id in input_body['ForensicInstanceIds']:
+            check_memory_investigation_status(
+                ssmclient,
+                s3_bucket_name,
+                s3_client,
+                fds,
+                input_body,
+                forensic_id,
+                output_body,
+                each_instance_id
+            )
+    else:
+        instance_id = input_body.get("instanceId")
+        check_memory_investigation_status(
+            ssmclient,
+            s3_bucket_name,
+            s3_client,
+            fds,
+            input_body,
+            forensic_id,
+            output_body,
+            instance_id
+        )
+
+def check_memory_investigation_status(
+    ssmclient,
+    s3_bucket_name,
+    s3_client,
+    fds,
+    input_body,
+    forensic_id,
+    output_body,
+    instance_id
+):
+    command_id = input_body['InstanceResults'][instance_id]["MemoryInvestigation"]["CommandId"]
+    command_id_artifact_map = input_body['InstanceResults'][instance_id]["MemoryInvestigation"][
         "CommandIdArtifactMap"
     ]
     prefix = command_id_artifact_map[command_id]["Prefix"]

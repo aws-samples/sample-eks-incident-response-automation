@@ -73,43 +73,82 @@ def handler(event, context):
             target_region=app_account_region,
             app_account_role=app_account_role,
         )
+
         # code starts here.
         forensic_id = input_body["forensicId"]
-        command_id = input_body["MemoryAcquisition"]["CommandId"]
-        command_id_artifact_map = input_body["MemoryAcquisition"][
-            "CommandIdArtifactMap"
-        ]
-        prefix = command_id_artifact_map[command_id]["Prefix"]
-        ssm_document_name = command_id_artifact_map[command_id][
-            "SSMDocumentName"
-        ]
-        logger.info(
-            "Got CommandId {}".format(
-                input_body["MemoryAcquisition"]["CommandId"]
+        for instance_id in input_body['ForensicInstanceIds']:
+            instance_memory_details = input_body['InstanceResults'][instance_id]
+            logger.info(instance_memory_details)
+            command_id = instance_memory_details['MemoryAcquisition']['CommandId']
+            command_id_artifact_map = instance_memory_details['MemoryAcquisition'][
+                'CommandIdArtifactMap'
+            ]
+            prefix = command_id_artifact_map[command_id]['Prefix']
+            ssm_document_name = command_id_artifact_map[command_id][
+                'SSMDocumentName'
+            ]
+            logger.info(
+                "Got CommandId {}".format(
+                    command_id
+                )
             )
-        )
-        logger.info(
-            "Got ForensicInstanceId {}".format(
-                input_body["ForensicInstanceId"]
+            logger.info(
+                "Got ForensicInstanceId {}".format(
+                    forensic_id
+                )
             )
-        )
-        ssm_response = ssm_client.get_command_invocation(
-            CommandId=command_id,
-            InstanceId=input_body["ForensicInstanceId"],
-        )
-        logger.info(output_body)
-        if ssm_response.get("StatusDetails", None) in [
-            "Pending",
-            "Delayed",
-            "InProgress",
-        ]:
-            output_body["isMemoryAcquisitionComplete"] = "FALSE"
-        elif ssm_response.get("StatusDetails", None) == "Success":
-            output_body["isMemoryAcquisitionComplete"] = "TRUE"
+            ssm_response = ssm_client.get_command_invocation(
+                CommandId=command_id,
+                InstanceId=instance_id,
+            )
+            logger.info(output_body)
+            if ssm_response.get("StatusDetails", None) in [
+                "Pending",
+                "Delayed",
+                "InProgress",
+            ]:
+                output_body['InstanceResults'][instance_id]['isMemoryAcquisitionComplete'] = False
+            elif ssm_response.get("StatusDetails", None) == "Success":
+                output_body['InstanceResults'][instance_id]['isMemoryAcquisitionComplete'] = True
+                artifact_metadata = resolve_artifact_metadata(
+                    s3_client, s3_bucket_name, prefix
+                )
+                if not artifact_metadata:
+                    raise ForensicLambdaExecutionException(
+                        "Job execution failed. SSM command succeeded however memory output was not uploaded."
+                    )
+                artifact_id = fds.create_forensic_artifact(
+                    id=forensic_id,
+                    phase=ForensicsProcessingPhase.ACQUISITION,
+                    category=ArtifactCategory.MEMORY,
+                    type=ArtifactType.MEMORYDUMP,
+                    status=ArtifactStatus.SUCCESS,
+                    component_id="checkMemoryAcquisition",
+                    component_type="Lambda",
+                    ssm_document_name=ssm_document_name,
+                    ssm_command_id=command_id,
+                    artifact_location=artifact_metadata[0].get(
+                        "artifact_location"
+                    ),
+                    artifact_size=artifact_metadata[0].get("artifact_size"),
+                    artifact_SHA256=artifact_metadata[0].get("sha256"),
+                )
+                output_body['InstanceResults'][instance_id]["MemoryAcquisition"][
+                    "CommandInputArtifactId"
+                ] = artifact_id
 
-            artifact_metadata = resolve_artifact_metadata(
-                s3_client, s3_bucket_name, prefix
-            )
+            elif ssm_response.get("StatusDetails", None) not in ["Success"]:
+                raise ForensicLambdaExecutionException(
+                    "Job execution failed. {}".format(
+                        ssm_response.get("StatusDetails", None)
+                    )
+                )
+        overall_instance_memory_acquisition_status = []
+        for instance_id in output_body['InstanceResults']:
+            overall_instance_memory_acquisition_status.append(output_body['InstanceResults'][instance_id]['isMemoryAcquisitionComplete'])
+        # check if all the list elements are True
+        if all(overall_instance_memory_acquisition_status):
+            output_body["isMemoryAcquisitionComplete"] = "TRUE"
             memory_acquisition_document_name = os.environ[
                 "LINUX_LIME_MEMORY_ACQUISITION"
             ]
@@ -117,7 +156,7 @@ def handler(event, context):
                 "WINDOWS_LIME_MEMORY_ACQUISITION"
             ]
 
-            platform_details = input_body.get("instanceInfo").get(
+            platform_details = input_body.get("instanceInfo")[0].get(
                 "PlatformDetails"
             )
 
@@ -131,39 +170,8 @@ def handler(event, context):
                 PermissionType="Share",
                 AccountIdsToRemove=[app_account_id],
             )
-
-            if not artifact_metadata:
-                raise ForensicLambdaExecutionException(
-                    "Job execution failed. SSM command succeeded however memory output was not uploaded."
-                )
-
-            artifact_id = fds.create_forensic_artifact(
-                id=forensic_id,
-                phase=ForensicsProcessingPhase.ACQUISITION,
-                category=ArtifactCategory.MEMORY,
-                type=ArtifactType.MEMORYDUMP,
-                status=ArtifactStatus.SUCCESS,
-                component_id="checkMemoryAcquisition",
-                component_type="Lambda",
-                ssm_document_name=ssm_document_name,
-                ssm_command_id=command_id,
-                artifact_location=artifact_metadata[0].get(
-                    "artifact_location"
-                ),
-                artifact_size=artifact_metadata[0].get("artifact_size"),
-                artifact_SHA256=artifact_metadata[0].get("sha256"),
-            )
-
-            output_body["MemoryAcquisition"][
-                "CommandInputArtifactId"
-            ] = artifact_id
-
-        elif ssm_response.get("StatusDetails", None) not in ["Success"]:
-            raise ForensicLambdaExecutionException(
-                "Job execution failed. {}".format(
-                    ssm_response.get("StatusDetails", None)
-                )
-            )
+        else:
+            output_body["isMemoryAcquisitionComplete"] = "FALSE"
         # code ends here.
         return create_response(200, output_body)
 

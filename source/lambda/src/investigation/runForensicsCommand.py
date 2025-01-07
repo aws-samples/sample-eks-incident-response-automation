@@ -60,15 +60,34 @@ def handler(event, _):
     s3_role_arn = os.environ["S3_COPY_ROLE"]
     forensic_type = input_body["forensicType"]
     output_body = input_body.copy()
-    platform_details = input_body.get("instanceInfo").get("PlatformDetails")
-    parser_id = "linux"
-    if platform_details == "Windows":
-        parser_id = "winevt,winevtx,winprefetch"
-        disk_investigation_document_name = os.environ[
-            "WINDOWS_DISK_INVESTIGATION"
-        ]
+    # platform_details = input_body.get("instanceInfo").get("PlatformDetails")
+    # parser_id = "linux"
+    # if platform_details == "Windows":
+    #     parser_id = "winevt,winevtx,winprefetch"
+    #     disk_investigation_document_name = os.environ[
+    #         "WINDOWS_DISK_INVESTIGATION"
+    #     ]
     try:
-
+        if 'clusterInfo' in input_body:
+            parser_id = "linux"
+            instance_id = input_body["instanceId"][0]
+            for each_instance_info in input_body['instanceInfo']:
+                if each_instance_info['InstanceId'] == instance_id:
+                    platform_details = each_instance_info['PlatformDetails']
+                    break
+            if platform_details == "Windows":
+                parser_id = "winevt,winevtx,winprefetch"
+                disk_investigation_document_name = os.environ[
+                    "WINDOWS_DISK_INVESTIGATION"
+                ]
+        else:
+            instance_id = input_body.get("instanceId")
+            parser_id = "linux"
+            if input_body["instanceInfo"]["PlatformDetails"] == "Windows":
+                parser_id = "winevt,winevtx,winprefetch"
+                disk_investigation_document_name = os.environ[
+                    "WINDOWS_DISK_INVESTIGATION"
+                ]
         volume_list = input_body["forensicAttachedVolumeInfo"]
         volume_artifact_map = input_body["VolumeArtifactMap"]
 
@@ -88,7 +107,7 @@ def handler(event, _):
             for item in response["InstanceInformationList"]
         )
 
-        instance_id = input_body.get("instanceId")
+        
         ssm_cmd_list = []
         ssm_cmd_artifact_map = {}
 

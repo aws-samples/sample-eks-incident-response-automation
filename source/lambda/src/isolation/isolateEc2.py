@@ -19,9 +19,12 @@ import json
 import os
 import time
 
+import botocore
 from arnparse import arnparse
 from aws_xray_sdk.core import xray_recorder
 from botocore.exceptions import ClientError
+from eks_token import get_token
+from kubernetes import client, config
 
 from ..common.awsapi_cached_client import create_aws_client
 from ..common.common import create_response
@@ -32,9 +35,6 @@ from ..common.exception import (
 from ..common.log import get_logger
 from ..data.datatypes import ForensicsProcessingPhase
 from ..data.service import ForensicDataService
-from kubernetes import client, config
-from eks_token import get_token
-import botocore
 
 # initialise loggers
 logger = get_logger(__name__)
@@ -56,10 +56,10 @@ def handler(event, context):
     else:
         input_body = event["Payload"]["body"]
     output = input_body.copy()
-    if 'clusterInfo' in input_body:
+    if "clusterInfo" in input_body:
         current_account = context.invoked_function_arn.split(":")[4]
-        cluster_account = input_body['instanceAccount']
-        cluster_region = input_body['instanceRegion']
+        cluster_account = input_body["instanceAccount"]
+        cluster_region = input_body["instanceRegion"]
         eks_client = create_aws_client(
             "eks",
             current_account=current_account,
@@ -75,8 +75,10 @@ def handler(event, context):
             app_account_role=app_account_role,
         )
         eks_label_pod(input_body, eks_client, app_account_role)
-        eks_pod_containtment(input_body, eks_client, app_account_role, iam_client)
-    
+        eks_pod_containtment(
+            input_body, eks_client, app_account_role, iam_client
+        )
+
     app_account_region = input_body.get("instanceRegion")
     instance_id = input_body.get("instanceInfo").get("InstanceId")
     recorded_sgs = input_body.get("instanceInfo").get("SecurityGroups")
@@ -94,7 +96,6 @@ def handler(event, context):
     app_account_id = input_body.get("instanceAccount")
     current_account = context.invoked_function_arn.split(":")[4]
 
-    
     forensic_isolation_instance_profile_name = os.environ[
         "FORENSIC_ISOLATION_INSTANCE_PROFILE_NAME"
     ]
@@ -236,26 +237,33 @@ def handler(event, context):
         raise ForensicLambdaExecutionException(error_message)
     return create_response(200, output)
 
+
 def get_cluster_info(cluster_name, eks_client):
     try:
         logger.info("Retrieve cluster endpoint and certificate")
         cluster_info = eks_client.describe_cluster(name=cluster_name)
-        endpoint = cluster_info['cluster']['endpoint']
-        cert_authority = cluster_info['cluster']['certificateAuthority']['data']
-        cluster_arn=cluster_info['cluster']['arn']
+        endpoint = cluster_info["cluster"]["endpoint"]
+        cert_authority = cluster_info["cluster"]["certificateAuthority"][
+            "data"
+        ]
+        cluster_arn = cluster_info["cluster"]["arn"]
         cluster_info = {
-            "endpoint" : endpoint,
-            "ca" : cert_authority,
-            "name":cluster_arn
+            "endpoint": endpoint,
+            "ca": cert_authority,
+            "name": cluster_arn,
         }
     except botocore.exceptions.ClientError as e:
         logger.error(f"Error retrieving cluster info: {e}")
         raise e
     return cluster_info
 
+
 def get_bearer_token(cluster_name, cluster_admin_role_arn):
-    eks_token=get_token(cluster_name=cluster_name, role_arn=cluster_admin_role_arn)
+    eks_token = get_token(
+        cluster_name=cluster_name, role_arn=cluster_admin_role_arn
+    )
     return eks_token
+
 
 def get_eks_credentials(cluster_name, eks_client, cluster_admin_role_arn):
     if cluster_name in cluster_cache:
@@ -265,119 +273,186 @@ def get_eks_credentials(cluster_name, eks_client, cluster_admin_role_arn):
         cluster = get_cluster_info(cluster_name, eks_client)
         # store in cache for execution environment resuse
         cluster_cache[cluster_name] = cluster
-    # Get kubeconfig token 
+    # Get kubeconfig token
     eks_token = get_bearer_token(cluster_name, cluster_admin_role_arn)
     kubeconfig = {
-        'apiVersion': 'v1',
-        'clusters': [{
-            'name': cluster['name'],
-            'cluster': {
-            'certificate-authority-data': cluster["ca"],
-            'server': cluster["endpoint"]}
-        }],
-        'contexts': [{'name': 'lambda-kubectl-context', 'context': {'cluster': cluster['name'], "user": cluster['name']}}],
-        'current-context': 'lambda-kubectl-context',
-        'kind': 'Config',
-        'preferences': {},
-        'users': [{'name': cluster['name'], "user" : {'token': eks_token['status']['token']}}]
+        "apiVersion": "v1",
+        "clusters": [
+            {
+                "name": cluster["name"],
+                "cluster": {
+                    "certificate-authority-data": cluster["ca"],
+                    "server": cluster["endpoint"],
+                },
+            }
+        ],
+        "contexts": [
+            {
+                "name": "lambda-kubectl-context",
+                "context": {
+                    "cluster": cluster["name"],
+                    "user": cluster["name"],
+                },
+            }
+        ],
+        "current-context": "lambda-kubectl-context",
+        "kind": "Config",
+        "preferences": {},
+        "users": [
+            {
+                "name": cluster["name"],
+                "user": {"token": eks_token["status"]["token"]},
+            }
+        ],
     }
     return kubeconfig
 
+
 def create_network_policy(api_instance, namespace, policy_name, policy_spec):
     # Get the namespace network policy for label with key affected and value yes
-    api_network_policy_list = api_instance.list_namespaced_network_policy(namespace)
+    api_network_policy_list = api_instance.list_namespaced_network_policy(
+        namespace
+    )
     if len(api_network_policy_list.items) == 0:
-        logger.info("No Network policy exist in the namespace. Hence creating one.")
+        logger.info(
+            "No Network policy exist in the namespace. Hence creating one."
+        )
         body = client.V1NetworkPolicy(
-                api_version="networking.k8s.io/v1",
-                kind="NetworkPolicy",
-                metadata=client.V1ObjectMeta(name=policy_name),
-                spec=policy_spec
-            )
+            api_version="networking.k8s.io/v1",
+            kind="NetworkPolicy",
+            metadata=client.V1ObjectMeta(name=policy_name),
+            spec=policy_spec,
+        )
         try:
-            api_response = api_instance.create_namespaced_network_policy(namespace, body)
-            logger.info("NetworkPolicy created. status='%s'" % str(api_response))
+            api_response = api_instance.create_namespaced_network_policy(
+                namespace, body
+            )
+            logger.info(
+                "NetworkPolicy created. status='%s'" % str(api_response)
+            )
         except Exception as e:
             logger.error("Error creating NetworkPolicy: %s" % e)
     else:
         for each_policy in api_network_policy_list.items:
             if each_policy.metadata.name == policy_name:
-                logger.info("Network policy already exist. Hence not updating it.")
+                logger.info(
+                    "Network policy already exist. Hence not updating it."
+                )
                 pass
             else:
                 try:
-                    api_response = api_instance.create_namespaced_network_policy(namespace, body)
-                    logger.info("NetworkPolicy created. status='%s'" % str(api_response))
+                    api_response = (
+                        api_instance.create_namespaced_network_policy(
+                            namespace, body
+                        )
+                    )
+                    logger.info(
+                        "NetworkPolicy created. status='%s'"
+                        % str(api_response)
+                    )
                 except Exception as e:
                     logger.error("Error creating NetworkPolicy: %s" % e)
 
-def create_sts_deny_policy_sa(api_instance, namespace, affected_pod_list, iam_client):
+
+def create_sts_deny_policy_sa(
+    api_instance, namespace, affected_pod_list, iam_client
+):
     for affected_pod in affected_pod_list:
-        pod_details=api_instance.read_namespaced_pod(namespace=namespace, name=affected_pod)
-        service_account_name=pod_details.spec.service_account
-        service_account_details = api_instance.read_namespaced_service_account(name=service_account_name,namespace=namespace)
-        service_account_annotations = service_account_details.metadata.annotations
-        if service_account_annotations == None or 'eks.amazonaws.com/role-arn' not in service_account_details.metadata.annotations: 
+        pod_details = api_instance.read_namespaced_pod(
+            namespace=namespace, name=affected_pod
+        )
+        service_account_name = pod_details.spec.service_account
+        service_account_details = api_instance.read_namespaced_service_account(
+            name=service_account_name, namespace=namespace
+        )
+        service_account_annotations = (
+            service_account_details.metadata.annotations
+        )
+        if (
+            service_account_annotations == None
+            or "eks.amazonaws.com/role-arn"
+            not in service_account_details.metadata.annotations
+        ):
             logger.info("No IRSA exist for the Service account")
         else:
-            logger.info("Revoking older session for the Service account IAM Role")
+            logger.info(
+                "Revoking older session for the Service account IAM Role"
+            )
             current_time = datetime.datetime.now()
-            service_account_iam_role_arn = service_account_annotations['eks.amazonaws.com/role-arn']
-            service_account_iam_role = service_account_iam_role_arn.split('/')[-1]
+            service_account_iam_role_arn = service_account_annotations[
+                "eks.amazonaws.com/role-arn"
+            ]
+            service_account_iam_role = service_account_iam_role_arn.split("/")[
+                -1
+            ]
             iam_client.put_role_policy(
-            RoleName=service_account_iam_role,
-            PolicyName="AWSRevokeOlderSTSSessions",
-            PolicyDocument='{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Action":["*"],"Resource":["*"],"Condition":{"DateLessThan":{"aws:TokenIssueTime":"'
-            + current_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-            + '"}}}]}'
-        )
-            
-def eks_pod_containtment(input_body, eks_client, cluster_admin_role_arn, iam_client):
-    affected_cluster = input_body['clusterInfo']['clusterName']
-    affected_pod_list = input_body['clusterInfo']['affectedPodResource']
-    affected_pod_namespace = input_body['clusterInfo']['affectedPodResourceNamespace']
-    get_kubeconfig = get_eks_credentials(affected_cluster, eks_client, cluster_admin_role_arn)
+                RoleName=service_account_iam_role,
+                PolicyName="AWSRevokeOlderSTSSessions",
+                PolicyDocument='{"Version":"2012-10-17","Statement":[{"Effect":"Deny","Action":["*"],"Resource":["*"],"Condition":{"DateLessThan":{"aws:TokenIssueTime":"'
+                + current_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                + '"}}}]}',
+            )
+
+
+def eks_pod_containtment(
+    input_body, eks_client, cluster_admin_role_arn, iam_client
+):
+    affected_cluster = input_body["clusterInfo"]["clusterName"]
+    affected_pod_list = input_body["clusterInfo"]["affectedPodResource"]
+    affected_pod_namespace = input_body["clusterInfo"][
+        "affectedPodResourceNamespace"
+    ]
+    get_kubeconfig = get_eks_credentials(
+        affected_cluster, eks_client, cluster_admin_role_arn
+    )
     config.load_kube_config_from_dict(config_dict=get_kubeconfig)
     core_api = client.CoreV1Api()
     network_api = client.NetworkingV1Api()
     policy_name = "deny-all-traffic"
     policy_spec = {
-        "podSelector": {
-            "matchLabels": {
-                "PHASE": "QUARANTINE"
-            }
-        },
-        "policyTypes": ["Ingress", "Egress"]
+        "podSelector": {"matchLabels": {"PHASE": "QUARANTINE"}},
+        "policyTypes": ["Ingress", "Egress"],
     }
-     # Call the create_namespaced_network_policy function to create the network policy
+    # Call the create_namespaced_network_policy function to create the network policy
 
-    logger.info(f"Creating Network Policy for namespace: {affected_pod_namespace} with name: {policy_name}")
-    create_network_policy(network_api,affected_pod_namespace, policy_name, policy_spec)
+    logger.info(
+        f"Creating Network Policy for namespace: {affected_pod_namespace} with name: {policy_name}"
+    )
+    create_network_policy(
+        network_api, affected_pod_namespace, policy_name, policy_spec
+    )
 
-     # Deny Permissions for the Role tied to Service account 
+    # Deny Permissions for the Role tied to Service account
 
     logger.info("Denying permissions for the role")
-    create_sts_deny_policy_sa(core_api, affected_pod_namespace, affected_pod_list, iam_client)
+    create_sts_deny_policy_sa(
+        core_api, affected_pod_namespace, affected_pod_list, iam_client
+    )
 
 
 def eks_label_pod(input_body, eks_client, cluster_admin_role_arn):
-    body_label = {
-        "metadata": {
-            "labels": {
-                "PHASE": "QUARANTINE"
-        }
-    }
-    }
-    affected_cluster = input_body['clusterInfo']['clusterName']
-    affected_pod_list = input_body['clusterInfo']['affectedPodResource']
-    affected_pod_namespace = input_body['clusterInfo']['affectedPodResourceNamespace']
-    get_kubeconfig = get_eks_credentials(affected_cluster, eks_client, cluster_admin_role_arn)
+    body_label = {"metadata": {"labels": {"PHASE": "QUARANTINE"}}}
+    affected_cluster = input_body["clusterInfo"]["clusterName"]
+    affected_pod_list = input_body["clusterInfo"]["affectedPodResource"]
+    affected_pod_namespace = input_body["clusterInfo"][
+        "affectedPodResourceNamespace"
+    ]
+    get_kubeconfig = get_eks_credentials(
+        affected_cluster, eks_client, cluster_admin_role_arn
+    )
     config.load_kube_config_from_dict(config_dict=get_kubeconfig)
     api_instance = client.CoreV1Api()
     for affected_pod in affected_pod_list:
-        logger.info(f"Patching the Pod {affected_pod} in namespace {affected_pod_namespace}")
-        api_instance.patch_namespaced_pod(name=affected_pod, namespace=affected_pod_namespace, body=body_label)
+        logger.info(
+            f"Patching the Pod {affected_pod} in namespace {affected_pod_namespace}"
+        )
+        api_instance.patch_namespaced_pod(
+            name=affected_pod,
+            namespace=affected_pod_namespace,
+            body=body_label,
+        )
         time.sleep(10)
+
 
 def invalid_existing_credential_sessions(iam_client, forensic_record):
     instance_profile = forensic_record.resourceInfo["IamInstanceProfile"]

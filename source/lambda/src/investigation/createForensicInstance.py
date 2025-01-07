@@ -186,11 +186,10 @@ def handler(event, _):
             UserData=user_data,
             BlockDeviceMappings=[
                 {
-                    "DeviceName": "/dev/sda1",
+                    "DeviceName": "/dev/xvda",
                     "Ebs": {
                         "VolumeSize": disk_size,
                         "DeleteOnTermination": True,
-                        "VolumeType": "gp2",
                     },
                 },
                 {

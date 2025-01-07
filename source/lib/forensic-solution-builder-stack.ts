@@ -586,6 +586,7 @@ export class ForensicsSolutionsConstructsStack extends Stack {
                 forensicsAcquisitionFns: forensicsAcquisitionFns,
                 investigationSM: investigationStepConstruct.getStateMachine(),
                 triageInstanceLambda: forensicsCoreFunctions.triageLambda,
+                checkAcquisitionLambda: forensicsCoreFunctions.checkAcquisitionLambda,
                 snsTopic: forensicDataSource.notificationTopic,
                 snsDataKey: this.kmsKeys.forensicsnsEncryptionKey.key,
                 triageLogGroup: this.forensicLogGroup,

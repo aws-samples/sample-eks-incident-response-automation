@@ -50,7 +50,7 @@ class ArtifactStatus(Enum):
 
 class ResourceType(Enum):
     INSTANCE = "INSTANCE"
-    EKS="EKS"
+    EKS = "EKS"
 
 
 class ForensicsProcessingPhase(Enum):
