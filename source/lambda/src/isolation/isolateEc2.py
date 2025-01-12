@@ -56,10 +56,29 @@ def handler(event, context):
     else:
         input_body = event["Payload"]["body"]
     output = input_body.copy()
+    ddb_client = create_aws_client("dynamodb")
+    fds = ForensicDataService(
+            ddb_client=ddb_client,
+            ddb_table_name=os.environ["INSTANCE_TABLE_NAME"],
+            auto_notify_subscribers=(
+                True
+                if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
+                else False
+            ),
+            appsync_api_endpoint_url=os.environ.get(
+                "APPSYNC_API_ENDPOINT", "API_NOT_ENABLED"
+            ),
+    )
+    forensic_id = input_body.get("forensicId")
+    forensic_record = fds.get_forensic_record(
+        record_id=forensic_id, metadata_only=True
+    )
     if "clusterInfo" in input_body:
+        resource_type = input_body['clusterInfo']['affectedResourceType']
         current_account = context.invoked_function_arn.split(":")[4]
         cluster_account = input_body["instanceAccount"]
         cluster_region = input_body["instanceRegion"]
+        app_account_role_arn = f'arn:aws:iam::{cluster_account}:role/ForensicEc2AllowAccessRole-us-east-1'
         eks_client = create_aws_client(
             "eks",
             current_account=current_account,
@@ -74,167 +93,272 @@ def handler(event, context):
             target_region=cluster_region,
             app_account_role=app_account_role,
         )
-        eks_label_pod(input_body, eks_client, app_account_role)
-        eks_pod_containtment(
-            input_body, eks_client, app_account_role, iam_client
+        ec2_client = create_aws_client(
+            "ec2",
+            current_account=current_account,
+            target_account=cluster_account,
+            target_region=cluster_region,
+            app_account_role=app_account_role,
+        )
+        # Containment of Pods , Nodes attached to that 
+        if resource_type == "Pods" or "Deployment" or "ServiceAccount":
+            try:
+                # Label the pod to be Qurantined 
+                eks_label_pod(input_body, eks_client, app_account_role_arn)
+                # Qurantine Pod with network deny policy and IAM role revocation
+                eks_pod_containtment(
+                    input_body, eks_client, app_account_role_arn, iam_client
+                )
+                # Cordon the node
+                eks_cordon_node(input_body, eks_client, app_account_role_arn)
+                fds.add_forensic_timeline_event(
+                    id=forensic_id,
+                    name=f"{resource_type} isolated",
+                    description=f"{resource_type} isolated for AWSEksCluster",
+                    phase=ForensicsProcessingPhase.ISOLATION,
+                    component_id="isolateEksCluster",
+                    component_type="Lambda",
+                    event_data=None,
+                )
+            except Exception as e:
+                logger.error(f"isolation failed, {e}")
+                exception_type = e.__class__.__name__
+                exception_message = str(e)
+                exception_obj = {
+                    "isError": True,
+                    "type": exception_type,
+                    "message": exception_message,
+                }
+
+                fds.add_forensic_timeline_event(
+                    id=forensic_id,
+                    name=f"{resource_type} isolation failed",
+                    description=f"Node isolation for AwsEKSCluster",
+                    phase=ForensicsProcessingPhase.ISOLATION_FAILED,
+                    component_id="isolateEksCluster",
+                    component_type="Lambda",
+                    event_data=exception_obj,
+                )
+        elif resource_type == "Node":
+            try:
+                # Cordon the node
+                eks_cordon_node(input_body, eks_client, app_account_role_arn)
+                # Revoke session credentials from IAM Role 
+                invalid_existing_credential_sessions(iam_client, forensic_record)
+                instance_id = input_body.get("instanceInfo")[0].get("InstanceId")
+                recorded_sgs = input_body.get("instanceInfo")[0].get("SecurityGroups")
+                recorded_enis = input_body.get("instanceInfo")[0].get("NetworkInterfaces")
+                sg_for_eni = [
+                    {
+                        "SecurityGroup": [sg.get("GroupId") for sg in item.get("Groups")],
+                        "ENI_ID": item.get("NetworkInterfaceId"),
+                    }
+                    for item in recorded_enis
+                ]
+                original_sg_ids = [item.get("GroupId") for item in recorded_sgs]
+                forensic_isolation_instance_profile_name = os.environ[
+                    "FORENSIC_ISOLATION_INSTANCE_PROFILE_NAME"
+                ]
+                instance_vpc = input_body.get("instanceInfo")[0].get("VpcId")
+                enable_evidence_protection(instance_id, ec2_client)
+
+                enable_evidence_protection_ebs(
+                    instance_id,
+                    forensic_record.resourceInfo["BlockDeviceMappings"],
+                    ec2_client,
+                )
+
+                (
+                    isolation_sg,
+                    isolation_sg_no_rule,
+                ) = get_required_isolation_security_groups(ec2_client, instance_vpc)
+
+                logger.info(
+                    f"isolating instance {instance_id}, step1 converting all traffic to untracked"
+                )
+                for eni in sg_for_eni:
+                    eni_id = eni.get("ENI_ID")
+                    ec2_client.modify_network_interface_attribute(
+                        NetworkInterfaceId=eni_id, Groups=[isolation_sg]
+                    )
+                    ec2_client.modify_network_interface_attribute(
+                        NetworkInterfaceId=eni_id, Groups=[isolation_sg_no_rule]
+                    )
+
+                detach_eip_from_instance(instance_id, ec2_client)
+
+                update_profile_for_instance(
+                    instance_id,
+                    app_account_id,
+                    forensic_isolation_instance_profile_name,
+                    ec2_client,
+                    current_account,
+                )
+                fds.add_forensic_timeline_event(
+                    id=forensic_id,
+                    name=f"{resource_type} isolated",
+                    description=f"{resource_type} isolated for AWSEksCluster",
+                    phase=ForensicsProcessingPhase.ISOLATION,
+                    component_id="isolateEksCluster",
+                    component_type="Lambda",
+                    event_data=None,
+                )
+            except Exception as e:
+                logger.error(f"isolation failed, {e}")
+                # best effort to revert back to original sgs
+                try:
+                    ec2_client.modify_instance_attribute(
+                        InstanceId=instance_id, Groups=original_sg_ids
+                    )
+                except ForensicLambdaExecutionException:
+                    logger.error("isolation reverting failed, abort")
+                # revert to original sg groups
+                exception_type = e.__class__.__name__
+                exception_message = str(e)
+                exception_obj = {
+                    "isError": True,
+                    "type": exception_type,
+                    "message": exception_message,
+                }
+
+                fds.add_forensic_timeline_event(
+                    id=forensic_id,
+                    name=f"{resource_type} isolation failed",
+                    description=f"Node isolation for AwsEKSCluster",
+                    phase=ForensicsProcessingPhase.ISOLATION_FAILED,
+                    component_id="isolateEksCluster",
+                    component_type="Lambda",
+                    event_data=exception_obj,
+                )
+    else:
+        app_account_region = input_body.get("instanceRegion")
+        instance_id = input_body.get("instanceInfo").get("InstanceId")
+        recorded_sgs = input_body.get("instanceInfo").get("SecurityGroups")
+        recorded_enis = input_body.get("instanceInfo").get("NetworkInterfaces")
+        sg_for_eni = [
+            {
+                "SecurityGroup": [sg.get("GroupId") for sg in item.get("Groups")],
+                "ENI_ID": item.get("NetworkInterfaceId"),
+            }
+            for item in recorded_enis
+        ]
+        original_sg_ids = [item.get("GroupId") for item in recorded_sgs]
+        # implementation
+
+        app_account_id = input_body.get("instanceAccount")
+        current_account = context.invoked_function_arn.split(":")[4]
+
+        forensic_isolation_instance_profile_name = os.environ[
+            "FORENSIC_ISOLATION_INSTANCE_PROFILE_NAME"
+        ]
+
+        ec2_client = create_aws_client(
+            "ec2",
+            current_account=current_account,
+            target_account=app_account_id,
+            target_region=app_account_region,
+            app_account_role=app_account_role,
         )
 
-    app_account_region = input_body.get("instanceRegion")
-    instance_id = input_body.get("instanceInfo").get("InstanceId")
-    recorded_sgs = input_body.get("instanceInfo").get("SecurityGroups")
-    recorded_enis = input_body.get("instanceInfo").get("NetworkInterfaces")
-    sg_for_eni = [
-        {
-            "SecurityGroup": [sg.get("GroupId") for sg in item.get("Groups")],
-            "ENI_ID": item.get("NetworkInterfaceId"),
-        }
-        for item in recorded_enis
-    ]
-    original_sg_ids = [item.get("GroupId") for item in recorded_sgs]
-    # implementation
-
-    app_account_id = input_body.get("instanceAccount")
-    current_account = context.invoked_function_arn.split(":")[4]
-
-    forensic_isolation_instance_profile_name = os.environ[
-        "FORENSIC_ISOLATION_INSTANCE_PROFILE_NAME"
-    ]
-
-    ec2_client = create_aws_client(
-        "ec2",
-        current_account=current_account,
-        target_account=app_account_id,
-        target_region=app_account_region,
-        app_account_role=app_account_role,
-    )
-
-    iam_client = create_aws_client(
-        "iam",
-        current_account=current_account,
-        target_account=app_account_id,
-        target_region=app_account_region,
-        app_account_role=app_account_role,
-    )
-
-    ddb_client = create_aws_client("dynamodb")
-
-    instance_vpc = input_body.get("instanceInfo").get("VpcId")
-    output = input_body.copy()
-    fds = ForensicDataService(
-        ddb_client=ddb_client,
-        ddb_table_name=os.environ["INSTANCE_TABLE_NAME"],
-        auto_notify_subscribers=(
-            True
-            if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
-            else False
-        ),
-        appsync_api_endpoint_url=os.environ.get(
-            "APPSYNC_API_ENDPOINT", "API_NOT_ENABLED"
-        ),
-    )
-    forensic_id = input_body.get("forensicId")
-    forensic_record = fds.get_forensic_record(
-        record_id=forensic_id, metadata_only=True
-    )
-
-    if (
-        forensic_record.memoryAnalysisStatus
-        == ForensicsProcessingPhase.ISOLATION_FAILED
-    ):
-        logger.warning(
-            f"Previous isolation fail for forensic record {forensic_id}, proceed to error handling"
+        iam_client = create_aws_client(
+            "iam",
+            current_account=current_account,
+            target_account=app_account_id,
+            target_region=app_account_region,
+            app_account_role=app_account_role,
         )
-        raise ForensicLambdaExecutionException("Previous isolation failed")
+        instance_vpc = input_body.get("instanceInfo").get("VpcId")
+        # output = input_body.copy()
 
-    enable_evidence_protection(instance_id, ec2_client)
+        enable_evidence_protection(instance_id, ec2_client)
 
-    enable_evidence_protection_ebs(
-        instance_id,
-        forensic_record.resourceInfo["BlockDeviceMappings"],
-        ec2_client,
-    )
-
-    try:
-        (
-            isolation_sg,
-            isolation_sg_no_rule,
-        ) = get_required_isolation_security_groups(ec2_client, instance_vpc)
-
-        logger.info(
-            f"isolating instance {instance_id}, step1 converting all traffic to untracked"
-        )
-        for eni in sg_for_eni:
-            eni_id = eni.get("ENI_ID")
-            ec2_client.modify_network_interface_attribute(
-                NetworkInterfaceId=eni_id, Groups=[isolation_sg]
-            )
-            ec2_client.modify_network_interface_attribute(
-                NetworkInterfaceId=eni_id, Groups=[isolation_sg_no_rule]
-            )
-
-        detach_eip_from_instance(instance_id, ec2_client)
-
-        invalid_existing_credential_sessions(iam_client, forensic_record)
-
-        update_profile_for_instance(
+        enable_evidence_protection_ebs(
             instance_id,
-            app_account_id,
-            forensic_isolation_instance_profile_name,
+            forensic_record.resourceInfo["BlockDeviceMappings"],
             ec2_client,
-            current_account,
         )
 
-        fds.add_forensic_timeline_event(
-            id=forensic_id,
-            name="Instance isolated",
-            description=f"Instance isolated for {instance_id}",
-            phase=ForensicsProcessingPhase.ISOLATION,
-            component_id="isolateEc2",
-            component_type="Lambda",
-            event_data=None,
-        )
-
-    except Exception as e:
-        logger.error(f"isolation failed, {e}")
-        # best effort to revert back to original sgs
         try:
-            ec2_client.modify_instance_attribute(
-                InstanceId=instance_id, Groups=original_sg_ids
+            (
+                isolation_sg,
+                isolation_sg_no_rule,
+            ) = get_required_isolation_security_groups(ec2_client, instance_vpc)
+
+            logger.info(
+                f"isolating instance {instance_id}, step1 converting all traffic to untracked"
             )
-        except ForensicLambdaExecutionException:
-            logger.error("isolation reverting failed, abort")
-        # revert to original sg groups
-        exception_type = e.__class__.__name__
-        exception_message = str(e)
-        exception_obj = {
-            "isError": True,
-            "type": exception_type,
-            "message": exception_message,
-        }
+            for eni in sg_for_eni:
+                eni_id = eni.get("ENI_ID")
+                ec2_client.modify_network_interface_attribute(
+                    NetworkInterfaceId=eni_id, Groups=[isolation_sg]
+                )
+                ec2_client.modify_network_interface_attribute(
+                    NetworkInterfaceId=eni_id, Groups=[isolation_sg_no_rule]
+                )
 
-        fds.add_forensic_timeline_event(
-            id=forensic_id,
-            name="Instance isolation failed",
-            description=f"Instance isolated for {instance_id} failed",
-            phase=ForensicsProcessingPhase.ISOLATION_FAILED,
-            component_id="isolateEc2",
-            component_type="Lambda",
-            event_data=exception_obj,
-        )
+            detach_eip_from_instance(instance_id, ec2_client)
 
-        logger.info(
-            f"Update forensic record isolation status for {forensic_record.id}"
-        )
-        fds.update_forensic_record_phase_status(
-            id=forensic_record.id,
-            memory=(
-                ForensicsProcessingPhase.ISOLATION_FAILED,
-                f"Error while isolating instance {instance_id}",
-            ),
-        )
-        raise e
-    if error_handling_flow:
-        raise ForensicLambdaExecutionException(error_message)
+            invalid_existing_credential_sessions(iam_client, forensic_record)
+
+            update_profile_for_instance(
+                instance_id,
+                app_account_id,
+                forensic_isolation_instance_profile_name,
+                ec2_client,
+                current_account,
+            )
+
+            fds.add_forensic_timeline_event(
+                id=forensic_id,
+                name="Instance isolated",
+                description=f"Instance isolated for {instance_id}",
+                phase=ForensicsProcessingPhase.ISOLATION,
+                component_id="isolateEc2",
+                component_type="Lambda",
+                event_data=None,
+            )
+
+        except Exception as e:
+            logger.error(f"isolation failed, {e}")
+            # best effort to revert back to original sgs
+            try:
+                ec2_client.modify_instance_attribute(
+                    InstanceId=instance_id, Groups=original_sg_ids
+                )
+            except ForensicLambdaExecutionException:
+                logger.error("isolation reverting failed, abort")
+            # revert to original sg groups
+            exception_type = e.__class__.__name__
+            exception_message = str(e)
+            exception_obj = {
+                "isError": True,
+                "type": exception_type,
+                "message": exception_message,
+            }
+
+            fds.add_forensic_timeline_event(
+                id=forensic_id,
+                name="Instance isolation failed",
+                description=f"Instance isolated for {instance_id} failed",
+                phase=ForensicsProcessingPhase.ISOLATION_FAILED,
+                component_id="isolateEc2",
+                component_type="Lambda",
+                event_data=exception_obj,
+            )
+
+            logger.info(
+                f"Update forensic record isolation status for {forensic_record.id}"
+            )
+            fds.update_forensic_record_phase_status(
+                id=forensic_record.id,
+                memory=(
+                    ForensicsProcessingPhase.ISOLATION_FAILED,
+                    f"Error while isolating instance {instance_id}",
+                ),
+            )
+            raise e
+        if error_handling_flow:
+            raise ForensicLambdaExecutionException(error_message)
     return create_response(200, output)
 
 
@@ -454,13 +578,44 @@ def eks_label_pod(input_body, eks_client, cluster_admin_role_arn):
         time.sleep(10)
 
 
+def eks_cordon_node(input_body, eks_client, cluster_admin_role_arn):
+    affected_cluster = input_body["clusterInfo"]["clusterName"]
+    affected_pod_list = input_body["clusterInfo"]["affectedPodResource"]
+    namespace = input_body["clusterInfo"]['affectedPodResourceNamespace']
+    get_kubeconfig = get_eks_credentials(
+        affected_cluster, eks_client, cluster_admin_role_arn
+    )
+    config.load_kube_config_from_dict(config_dict=get_kubeconfig)
+    api_instance = client.CoreV1Api()
+    for affected_pod in affected_pod_list:
+        pod_info = api_instance.read_namespaced_pod(
+            name=affected_pod, namespace=namespace
+        )
+        node_name = pod_info.spec.node_name
+        node_info = api_instance.read_node(name=node_name)
+        if node_info.spec.unschedulable:
+            logger.info(f"Node {node_name} is already cordoned. Skipping.")
+            continue
+        else:
+            logger.info(f"Cordoning the node {node_name}")
+            body = {"spec": {"unschedulable": True}}
+            api_instance.patch_node(node_name, body)
+            time.sleep(10)
+
 def invalid_existing_credential_sessions(iam_client, forensic_record):
-    instance_profile = forensic_record.resourceInfo["IamInstanceProfile"]
-    if not instance_profile:
-        return
-    instance_profile_arn = forensic_record.resourceInfo["IamInstanceProfile"][
+    resource_type = forensic_record.resourceType
+    if resource_type == 'INSTANCE':
+        instance_profile = forensic_record.resourceInfo["IamInstanceProfile"]
+        instance_profile_arn = forensic_record.resourceInfo["IamInstanceProfile"][
         "Arn"
     ]
+    else:
+        instance_profile = forensic_record.resourceInfo[0]['IamInstanceProfile']
+        instance_profile_arn = forensic_record.resourceInfo[0]["IamInstanceProfile"][
+        "Arn"
+    ]
+    if not instance_profile:
+        return
     parsed_arn = arnparse(instance_profile_arn)
     profile_name = parsed_arn.resource
     iam_profile_rsp = iam_client.get_instance_profile(

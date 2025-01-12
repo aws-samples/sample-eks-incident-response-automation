@@ -257,8 +257,8 @@ def lambda_handler(event, context):
                 {
                     "clusterName": cluster_name,
                     "affectedResourceType": affected_cluster_resource_type,
-                    "affectedPodResource": affected_pod_namespace,
-                    "affectedPodResourceNamespace": affected_pod_list_resource,
+                    "affectedPodResource": affected_pod_list_resource,
+                    "affectedPodResourceNamespace": affected_pod_namespace,
                     "affectedNode": affected_node_list,
                     "instanceInfo": affected_instance_info_list,
                 }
