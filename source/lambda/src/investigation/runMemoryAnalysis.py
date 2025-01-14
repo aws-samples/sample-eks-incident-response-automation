@@ -57,13 +57,10 @@ def handler(event, _):
             output_body = perform_memory_investigation(each_instance_id, platform_name, platform_version, platform_detail, event)
         return create_response(200, output_body)
     else:
-        instance_id = input_body.get("instanceId")
+        instance_id = input_body['ForensicInstanceIds'][0]
         platform_name = input_body.get("instanceInfo").get("PlatformName")
-
         platform_version = input_body.get("instanceInfo").get("PlatformVersion")
-
         platform_detail = input_body.get("instanceInfo").get("PlatformDetails")
-
         output_body = perform_memory_investigation(instance_id, platform_name, platform_version, platform_detail, event)
         return create_response(200, output_body)
 
@@ -99,6 +96,7 @@ def perform_memory_investigation(instance_id, platform_name, platform_version, p
     input_body = event["Payload"]["body"]
     forensic_id = input_body["forensicId"]
     s3_role_arn = os.environ["S3_COPY_ROLE"]
+    logger.info(f'The input body is {input_body}')
     input_artifact_id = input_body['InstanceResults'][instance_id]['MemoryAcquisition'][
         "CommandInputArtifactId"
     ]

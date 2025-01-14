@@ -244,7 +244,7 @@ def memory_investigation(
                 each_instance_id
             )
     else:
-        instance_id = input_body.get("instanceId")
+        instance_id = input_body['ForensicInstanceIds'][0]
         check_memory_investigation_status(
             ssmclient,
             s3_bucket_name,

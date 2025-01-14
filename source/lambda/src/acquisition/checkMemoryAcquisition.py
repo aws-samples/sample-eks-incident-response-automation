@@ -94,7 +94,7 @@ def handler(event, context):
             )
             logger.info(
                 "Got ForensicInstanceId {}".format(
-                    forensic_id
+                    instance_id
                 )
             )
             ssm_response = ssm_client.get_command_invocation(
@@ -143,8 +143,9 @@ def handler(event, context):
                         ssm_response.get("StatusDetails", None)
                     )
                 )
+        logger.info(f'The output body is {output_body}')
         overall_instance_memory_acquisition_status = []
-        for instance_id in output_body['InstanceResults']:
+        for instance_id in output_body['ForensicInstanceIds']:
             overall_instance_memory_acquisition_status.append(output_body['InstanceResults'][instance_id]['isMemoryAcquisitionComplete'])
         # check if all the list elements are True
         if all(overall_instance_memory_acquisition_status):
@@ -156,9 +157,12 @@ def handler(event, context):
                 "WINDOWS_LIME_MEMORY_ACQUISITION"
             ]
 
-            platform_details = input_body.get("instanceInfo")[0].get(
-                "PlatformDetails"
-            )
+            if 'clusterInfo' in input_body:
+                platform_details = input_body.get("instanceInfo")[0].get(
+                    "PlatformDetails"
+                )
+            else:
+                platform_details = input_body.get("instanceInfo").get("PlatformDetails")
 
             if platform_details == "Windows":
                 memory_acquisition_document_name = (

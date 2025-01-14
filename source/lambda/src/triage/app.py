@@ -178,7 +178,7 @@ def lambda_handler(event, context):
             )
             (
                 affected_cluster_resource_type,
-                affected_pod_namespace,
+                affected_resource_namespace,
                 affected_pod_list_resource,
             ) = get_affected_resource_in_cluster(
                 event, cluster_name, eks_client, app_account_role_arn
@@ -213,7 +213,7 @@ def lambda_handler(event, context):
                 affected_node_list = get_affected_node_from_pod(
                     cluster_name,
                     affected_pod_list_resource,
-                    affected_pod_namespace,
+                    affected_resource_namespace,
                     eks_client,
                     app_account_role_arn,
                 )
@@ -258,7 +258,7 @@ def lambda_handler(event, context):
                     "clusterName": cluster_name,
                     "affectedResourceType": affected_cluster_resource_type,
                     "affectedPodResource": affected_pod_list_resource,
-                    "affectedPodResourceNamespace": affected_pod_namespace,
+                    "affectedResourceNamespace": affected_resource_namespace,
                     "affectedNode": affected_node_list,
                     "instanceInfo": affected_instance_info_list,
                 }
@@ -653,7 +653,7 @@ def get_affected_resource_in_cluster(
     Returns:
         tuple: Contains:
             - affected_resource_type (str): Type of affected resource (ServiceAccount/Node/Deployment/Pods/none)
-            - affected_pod_namespace (str): Namespace of affected pods
+            - affected_resource_namespace (str): Namespace of affected pods
             - affected_pod (list): List of affected pod names
 
     Handles different resource types:
@@ -676,12 +676,12 @@ def get_affected_resource_in_cluster(
             "kubernetesDetails/kubernetesUserDetails/username"
         ]
         service_account = service_account_name_detail.split(":")[-1]
-        affected_pod_namespace = service_account_name_detail.split(":")[-2]
+        affected_resource_namespace = service_account_name_detail.split(":")[-2]
         affected_pod = get_affected_pods(
             affected_resource_type,
             clustername,
             service_account,
-            affected_pod_namespace,
+            affected_resource_namespace,
             eks_client,
             cluster_admin_role_arn,
         )
@@ -689,7 +689,7 @@ def get_affected_resource_in_cluster(
         logger.info("Entire node is impacted")
         affected_resource_type = "Node"
         affected_pod = []
-        affected_pod_namespace = "none"
+        affected_resource_namespace = "none"
     else:
         affected_resource_type = event["detail"]["findings"][0]["Resources"][
             0
@@ -704,7 +704,7 @@ def get_affected_resource_in_cluster(
             ]["Details"]["Other"][
                 "kubernetesDetails/kubernetesWorkloadDetails/name"
             ]
-            affected_pod_namespace = event["detail"]["findings"][0][
+            affected_resource_namespace = event["detail"]["findings"][0][
                 "Resources"
             ][0]["Details"]["Other"][
                 "kubernetesDetails/kubernetesWorkloadDetails/namespace"
@@ -713,7 +713,7 @@ def get_affected_resource_in_cluster(
                 affected_resource_type,
                 clustername,
                 affected_deployment,
-                affected_pod_namespace,
+                affected_resource_namespace,
                 eks_client,
                 cluster_admin_role_arn,
             )
@@ -728,7 +728,7 @@ def get_affected_resource_in_cluster(
             ].split(
                 " "
             )
-            affected_pod_namespace = event["detail"]["findings"][0][
+            affected_resource_namespace = event["detail"]["findings"][0][
                 "Resources"
             ][0]["Details"]["Other"][
                 "kubernetesDetails/kubernetesWorkloadDetails/namespace"
@@ -737,10 +737,10 @@ def get_affected_resource_in_cluster(
         else:
             affected_resource_type = "none"
             affected_pod = []
-            affected_pod_namespace = "none"
+            affected_resource_namespace = "none"
             logger.info("No rollout triggered")
 
-    return affected_resource_type, affected_pod_namespace, affected_pod
+    return affected_resource_type, affected_resource_namespace, affected_pod
 
 
 def get_instance_details(event):

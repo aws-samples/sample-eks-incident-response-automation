@@ -250,7 +250,7 @@ export class ForensicsCore extends Construct {
         // Lambda - Function to Check the instance Acquisition requirement
         //-------------------------------------------------------------------------
         this.checkAcquisitionLambda = new PythonLambdaConstruct(this, 'checkAcquisitionFunction', {
-            handler: 'src.acquisition.checkacquisition.lambda_handler',
+            handler: 'src.acquisition.checkAcquisition.lambda_handler',
             applicationName: 'checkAcquisition',
             functionName: 'Fo-checkAcquisition',
             initialPolicy: [...additionalPolicies],

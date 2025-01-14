@@ -1,12 +1,41 @@
-# Automated Forensics Orchestrator for Amazon EC2
+# Automated Forensics Orchestrator for Amazon EKS
 
-AWS EC2 Forensics Orchestrator is a self-service AWS Solution implementation that enterprise customers can deploy to quickly set up and configure an automated orchestration workflow. The workflow enables the Security Operations Centre (SOC) to capture and examine data from EC2 instances and attached volumes as evidence for forensic analysis, in the event of a potential security breach.
+This solution extends the existing [EC2 forensic orchestrator](https://docs.aws.amazon.com/solutions/latest/automated-forensics-orchestrator-for-amazon-ec2/welcome.html) to support both EC2 and EKS cluster investigations. The enhanced version handles multiple instance scenarios and different EKS compromise scenarios including:
 
-The solution orchestrates the forensics process from the point at which a threat is first detected, enable isolation of the affected EC2 instances and data volumes, capture memory and disk images to secure storage, and trigger automated actions or tools for investigation and analysis of such artefacts. The solution notifies and reports on its progress, status, and findings, which enables SOCs to continuously discover and analyze patterns of fraudulent activities across multi-account and multi-region environments. The solution leverages native AWS services and is underpinned by a highly available, resilient, and serverless architecture, security, and operational monitoring features.
+* Pod compromises
+* Node compromises
+* Service account compromises
+* Deployment compromises
 
-Digital forensics is a four step process of triaging, acquisition, analysis and reporting. The automated Forensics framework provides enterprises the capability to act on a security event by imaging or acquisition of breached resource for examination and generates a forensic report about the security breach. In the event of a security breach, it enable customers to easily to capture and examine required targeted data for forsensic’s storage and analysis.
+# Usage
 
-A full walkthrough for the solution can be found [here](https://docs.aws.amazon.com/solutions/latest/automated-forensics-orchestrator-for-amazon-ec2/welcome.html)
+## If you have the EC2 forensic orchestrator deployed:
+
+* Pull latest code changes
+* Update existing deployment
+* Verify EKS cluster access
+
+## For New Deployments
+
+* Deploy solution using provided CDK
+* Configure forensic AMI in cdk.json
+* Solution will support both EC2 and EKS forensics
+
+## Important Notes
+
+* Solution maintains existing EC2 forensic tools
+* Handles multiple instance scenarios
+* Resource-specific handling for EKS components
+* Parallel processing for multiple instances
+* Compatible with existing forensic workflows
+
+## Limitations
+
+Not currently handling:
+
+* Compromised user scenarios in EKS 
+* Compromised image scenarios in EKS
+
 
 ### EC2 Forensic Orchestrator Solution Architecture
 
