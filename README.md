@@ -39,7 +39,7 @@ Not currently handling:
 
 ### EC2 Forensic Orchestrator Solution Architecture
 
-![Forensic Orchestrator Architecture](source/architecture/architecture.png)
+![Forensic Orchestrator Architecture](source/architecture/automated_forensics_eks.png)
 
 ---
 
