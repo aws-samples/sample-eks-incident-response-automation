@@ -76,27 +76,23 @@ def handler(event, context):
 
         # code starts here.
         forensic_id = input_body["forensicId"]
-        for instance_id in input_body['ForensicInstanceIds']:
-            instance_memory_details = input_body['InstanceResults'][instance_id]
+        for instance_id in input_body["ForensicInstanceIds"]:
+            instance_memory_details = input_body["InstanceResults"][
+                instance_id
+            ]
             logger.info(instance_memory_details)
-            command_id = instance_memory_details['MemoryAcquisition']['CommandId']
-            command_id_artifact_map = instance_memory_details['MemoryAcquisition'][
-                'CommandIdArtifactMap'
+            command_id = instance_memory_details["MemoryAcquisition"][
+                "CommandId"
             ]
-            prefix = command_id_artifact_map[command_id]['Prefix']
+            command_id_artifact_map = instance_memory_details[
+                "MemoryAcquisition"
+            ]["CommandIdArtifactMap"]
+            prefix = command_id_artifact_map[command_id]["Prefix"]
             ssm_document_name = command_id_artifact_map[command_id][
-                'SSMDocumentName'
+                "SSMDocumentName"
             ]
-            logger.info(
-                "Got CommandId {}".format(
-                    command_id
-                )
-            )
-            logger.info(
-                "Got ForensicInstanceId {}".format(
-                    instance_id
-                )
-            )
+            logger.info("Got CommandId {}".format(command_id))
+            logger.info("Got ForensicInstanceId {}".format(instance_id))
             ssm_response = ssm_client.get_command_invocation(
                 CommandId=command_id,
                 InstanceId=instance_id,
@@ -107,9 +103,13 @@ def handler(event, context):
                 "Delayed",
                 "InProgress",
             ]:
-                output_body['InstanceResults'][instance_id]['isMemoryAcquisitionComplete'] = False
+                output_body["InstanceResults"][instance_id][
+                    "isMemoryAcquisitionComplete"
+                ] = False
             elif ssm_response.get("StatusDetails", None) == "Success":
-                output_body['InstanceResults'][instance_id]['isMemoryAcquisitionComplete'] = True
+                output_body["InstanceResults"][instance_id][
+                    "isMemoryAcquisitionComplete"
+                ] = True
                 artifact_metadata = resolve_artifact_metadata(
                     s3_client, s3_bucket_name, prefix
                 )
@@ -133,9 +133,9 @@ def handler(event, context):
                     artifact_size=artifact_metadata[0].get("artifact_size"),
                     artifact_SHA256=artifact_metadata[0].get("sha256"),
                 )
-                output_body['InstanceResults'][instance_id]["MemoryAcquisition"][
-                    "CommandInputArtifactId"
-                ] = artifact_id
+                output_body["InstanceResults"][instance_id][
+                    "MemoryAcquisition"
+                ]["CommandInputArtifactId"] = artifact_id
 
             elif ssm_response.get("StatusDetails", None) not in ["Success"]:
                 raise ForensicLambdaExecutionException(
@@ -143,10 +143,14 @@ def handler(event, context):
                         ssm_response.get("StatusDetails", None)
                     )
                 )
-        logger.info(f'The output body is {output_body}')
+        logger.info(f"The output body is {output_body}")
         overall_instance_memory_acquisition_status = []
-        for instance_id in output_body['ForensicInstanceIds']:
-            overall_instance_memory_acquisition_status.append(output_body['InstanceResults'][instance_id]['isMemoryAcquisitionComplete'])
+        for instance_id in output_body["ForensicInstanceIds"]:
+            overall_instance_memory_acquisition_status.append(
+                output_body["InstanceResults"][instance_id][
+                    "isMemoryAcquisitionComplete"
+                ]
+            )
         # check if all the list elements are True
         if all(overall_instance_memory_acquisition_status):
             output_body["isMemoryAcquisitionComplete"] = "TRUE"
@@ -157,12 +161,14 @@ def handler(event, context):
                 "WINDOWS_LIME_MEMORY_ACQUISITION"
             ]
 
-            if 'clusterInfo' in input_body:
+            if "clusterInfo" in input_body:
                 platform_details = input_body.get("instanceInfo")[0].get(
                     "PlatformDetails"
                 )
             else:
-                platform_details = input_body.get("instanceInfo").get("PlatformDetails")
+                platform_details = input_body.get("instanceInfo").get(
+                    "PlatformDetails"
+                )
 
             if platform_details == "Windows":
                 memory_acquisition_document_name = (

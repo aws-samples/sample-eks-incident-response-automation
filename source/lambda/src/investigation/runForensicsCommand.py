@@ -68,12 +68,12 @@ def handler(event, _):
     #         "WINDOWS_DISK_INVESTIGATION"
     #     ]
     try:
-        if 'clusterInfo' in input_body:
+        if "clusterInfo" in input_body:
             parser_id = "linux"
             instance_id = input_body["instanceId"][0]
-            for each_instance_info in input_body['instanceInfo']:
-                if each_instance_info['InstanceId'] == instance_id:
-                    platform_details = each_instance_info['PlatformDetails']
+            for each_instance_info in input_body["instanceInfo"]:
+                if each_instance_info["InstanceId"] == instance_id:
+                    platform_details = each_instance_info["PlatformDetails"]
                     break
             if platform_details == "Windows":
                 parser_id = "winevt,winevtx,winprefetch"
@@ -107,7 +107,6 @@ def handler(event, _):
             for item in response["InstanceInformationList"]
         )
 
-        
         ssm_cmd_list = []
         ssm_cmd_artifact_map = {}
 

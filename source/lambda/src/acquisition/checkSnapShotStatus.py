@@ -70,21 +70,30 @@ def handler(event, context):
         if "clusterInfo" in input_body:
             all_complete = True
             for instance_id in input_body:
-                if isinstance(input_body[instance_id], dict) and "snapshotIds" in input_body[instance_id]:
+                if (
+                    isinstance(input_body[instance_id], dict)
+                    and "snapshotIds" in input_body[instance_id]
+                ):
                     instance_data = input_body[instance_id]
                     snapshot_ids = instance_data.get("snapshotIds")
-                    snapshot_artifact_map = instance_data.get("snapshotArtifactMap")
-                    
-                    snapshots = ec2_client.describe_snapshots(SnapshotIds=snapshot_ids)
+                    snapshot_artifact_map = instance_data.get(
+                        "snapshotArtifactMap"
+                    )
+
+                    snapshots = ec2_client.describe_snapshots(
+                        SnapshotIds=snapshot_ids
+                    )
                     snapshots_complete = all_snapshots_completed(snapshots)
                     instance_data["isSnapShotComplete"] = snapshots_complete
                     all_complete = all_complete and snapshots_complete
-                    
+
                     for snapshot in snapshots.get("Snapshots"):
                         if snapshot.get("State") == "completed":
                             fds.update_forensic_artifact(
                                 id=forensic_id,
-                                artifact_id=snapshot_artifact_map[snapshot.get("SnapshotId")],
+                                artifact_id=snapshot_artifact_map[
+                                    snapshot.get("SnapshotId")
+                                ],
                                 status=ArtifactStatus.SUCCESS,
                                 phase=ForensicsProcessingPhase.ACQUISITION,
                                 component_id="checkSnapShotStatus",
@@ -105,7 +114,9 @@ def handler(event, context):
                 if snapshot.get("State") == "completed":
                     fds.update_forensic_artifact(
                         id=forensic_id,
-                        artifact_id=snapshot_artifact_map[snapshot.get("SnapshotId")],
+                        artifact_id=snapshot_artifact_map[
+                            snapshot.get("SnapshotId")
+                        ],
                         status=ArtifactStatus.SUCCESS,
                         phase=ForensicsProcessingPhase.ACQUISITION,
                         component_id="checkSnapShotStatus",

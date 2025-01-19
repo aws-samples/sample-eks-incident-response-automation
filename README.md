@@ -24,7 +24,7 @@ This solution extends the existing [EC2 forensic orchestrator](https://docs.aws.
 ## Important Notes
 
 * Solution maintains existing EC2 forensic tools
-* Handles multiple instance scenarios
+* Handles multiple instance scenarios for EKS
 * Resource-specific handling for EKS components
 * Parallel processing for multiple instances
 * Compatible with existing forensic workflows
@@ -35,9 +35,10 @@ Not currently handling:
 
 * Compromised user scenarios in EKS 
 * Compromised image scenarios in EKS
+* Test Coverage for EKS 
 
 
-### EC2 Forensic Orchestrator Solution Architecture
+### EKS/EC2 Forensic Orchestrator Solution Architecture
 
 ![Forensic Orchestrator Architecture](source/architecture/automated_forensics_eks.png)
 
@@ -72,7 +73,7 @@ _Tools_
 ### Forensic account deployment
 
 1. Clone the solution source code from its GitHub repository.
-   `git clone https://github.com/aws-solutions/automated-forensic-orchestrator-for-amazon-ec2.git`
+   `git clone <Repository>`
 2. Open the terminal and navigate to the folder created in step 1, and then navigate to the source folder
 3. Configure your application accounts monitored to establish trust relationship in `cdk.json`
    `"applicationAccounts": ["<<Application account1>>", "<<Application account2>>"],`
@@ -107,7 +108,7 @@ To push Forensic findings into a Forensic Account, deploy the following stack in
 _Note_: If you are reusing the above git clone, delete the `cdk.out` folder.
 
 1. Clone the solution source code from its GitHub repository.
-   `git clone https://github.com/aws-solutions/automated-forensic-orchestrator-for-amazon-ec2.git`
+   `git clone <Repository>`
 2. Open the terminal and navigate to the folder created in step 1, and then navigate to the `source` folder.
 3. Set AWS Credentials to deploy into the AWS Account
     - export AWS_ACCESS_KEY_ID=<<XXXXXXXXXXXXXXXX>>

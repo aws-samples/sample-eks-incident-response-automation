@@ -32,40 +32,49 @@ from ..data.service import ForensicDataService
 
 logger = get_logger(__name__)
 
-def create_instance_snapshot(instance_id, ec2_client, forensic_id, fds, app_account_id, app_account_region):
-        snapshot_details = ec2_client.create_snapshots(
-            Description=f"Isolated Instance - Forensic ID: {forensic_id}",
-            InstanceSpecification={
-                "InstanceId": instance_id,
-                "ExcludeBootVolume": False,
-            },
+
+def create_instance_snapshot(
+    instance_id,
+    ec2_client,
+    forensic_id,
+    fds,
+    app_account_id,
+    app_account_region,
+):
+    snapshot_details = ec2_client.create_snapshots(
+        Description=f"Isolated Instance - Forensic ID: {forensic_id}",
+        InstanceSpecification={
+            "InstanceId": instance_id,
+            "ExcludeBootVolume": False,
+        },
+    )
+
+    snapshot_ids = []
+    snapshot_artifact_map = {}
+
+    for snapshot in snapshot_details.get("Snapshots"):
+        artifact_id = fds.create_forensic_artifact(
+            id=forensic_id,
+            phase=ForensicsProcessingPhase.ACQUISITION,
+            category=ArtifactCategory.DISK,
+            type=ArtifactType.EC2SNAPSHOT,
+            status=ArtifactStatus.CREATING,
+            component_id="performInstanceSnapshot",
+            component_type="Lambda",
+            source_account_snapshot=Snapshot(
+                snapshot.get("SnapshotId"),
+                snapshot.get("VolumeId"),
+                snapshot.get("VolumeSize"),
+                app_account_id,
+                app_account_region,
+            ),
         )
+        snapshot_ids.append(snapshot.get("SnapshotId"))
 
-        snapshot_ids = []
-        snapshot_artifact_map = {}
+        snapshot_artifact_map[snapshot.get("SnapshotId")] = artifact_id
 
-        for snapshot in snapshot_details.get("Snapshots"):
-            artifact_id = fds.create_forensic_artifact(
-                id=forensic_id,
-                phase=ForensicsProcessingPhase.ACQUISITION,
-                category=ArtifactCategory.DISK,
-                type=ArtifactType.EC2SNAPSHOT,
-                status=ArtifactStatus.CREATING,
-                component_id="performInstanceSnapshot",
-                component_type="Lambda",
-                source_account_snapshot=Snapshot(
-                    snapshot.get("SnapshotId"),
-                    snapshot.get("VolumeId"),
-                    snapshot.get("VolumeSize"),
-                    app_account_id,
-                    app_account_region,
-                ),
-            )
-            snapshot_ids.append(snapshot.get("SnapshotId"))
+    return snapshot_ids, snapshot_artifact_map
 
-            snapshot_artifact_map[snapshot.get("SnapshotId")] = artifact_id
-
-        return snapshot_ids, snapshot_artifact_map
 
 @xray_recorder.capture("Perform Instance SnapShot")
 def handler(event, context):
@@ -116,15 +125,19 @@ def handler(event, context):
             instance_id_list = forensic_record.resourceId
             output_body["instanceId"] = instance_id_list
             for each_instance_id in instance_id_list:
-                logger.info("Taking snapshot for EBS volumes {0}".format(each_instance_id))
-                snapshot_ids, snapshot_artifact_map = create_instance_snapshot(
-                     each_instance_id,
-                     ec2_client,
-                     forensic_id,
-                     fds,
-                     app_account_id,
-                     app_account_region
+                logger.info(
+                    "Taking snapshot for EBS volumes {0}".format(
+                        each_instance_id
                     )
+                )
+                snapshot_ids, snapshot_artifact_map = create_instance_snapshot(
+                    each_instance_id,
+                    ec2_client,
+                    forensic_id,
+                    fds,
+                    app_account_id,
+                    app_account_region,
+                )
                 output_body[each_instance_id] = {
                     "isSnapShotComplete": False,
                     "snapshotIds": snapshot_ids,
@@ -135,14 +148,16 @@ def handler(event, context):
         else:
             instance_id = forensic_record.resourceId
             output_body["instanceId"] = instance_id
-            logger.info("Taking snapshot for EBS volumes {0}".format(instance_id)) 
+            logger.info(
+                "Taking snapshot for EBS volumes {0}".format(instance_id)
+            )
             snapshot_ids, snapshot_artifact_map = create_instance_snapshot(
                 instance_id,
                 ec2_client,
                 forensic_id,
                 fds,
                 app_account_id,
-                app_account_region
+                app_account_region,
             )
             output_body["isSnapShotComplete"] = False
             output_body["snapshotIds"] = snapshot_ids

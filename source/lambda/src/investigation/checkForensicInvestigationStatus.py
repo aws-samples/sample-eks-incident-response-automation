@@ -231,8 +231,8 @@ def memory_investigation(
     forensic_id,
     output_body,
 ):
-    if 'clusterInfo' in input_body:
-        for each_instance_id in input_body['ForensicInstanceIds']:
+    if "clusterInfo" in input_body:
+        for each_instance_id in input_body["ForensicInstanceIds"]:
             check_memory_investigation_status(
                 ssmclient,
                 s3_bucket_name,
@@ -241,10 +241,10 @@ def memory_investigation(
                 input_body,
                 forensic_id,
                 output_body,
-                each_instance_id
+                each_instance_id,
             )
     else:
-        instance_id = input_body['ForensicInstanceIds'][0]
+        instance_id = input_body["ForensicInstanceIds"][0]
         check_memory_investigation_status(
             ssmclient,
             s3_bucket_name,
@@ -253,8 +253,9 @@ def memory_investigation(
             input_body,
             forensic_id,
             output_body,
-            instance_id
+            instance_id,
         )
+
 
 def check_memory_investigation_status(
     ssmclient,
@@ -264,12 +265,14 @@ def check_memory_investigation_status(
     input_body,
     forensic_id,
     output_body,
-    instance_id
+    instance_id,
 ):
-    command_id = input_body['InstanceResults'][instance_id]["MemoryInvestigation"]["CommandId"]
-    command_id_artifact_map = input_body['InstanceResults'][instance_id]["MemoryInvestigation"][
-        "CommandIdArtifactMap"
-    ]
+    command_id = input_body["InstanceResults"][instance_id][
+        "MemoryInvestigation"
+    ]["CommandId"]
+    command_id_artifact_map = input_body["InstanceResults"][instance_id][
+        "MemoryInvestigation"
+    ]["CommandIdArtifactMap"]
     prefix = command_id_artifact_map[command_id]["Prefix"]
     ssm_document_name = command_id_artifact_map[command_id]["SSMDocumentName"]
     input_artifact_id = command_id_artifact_map[command_id][

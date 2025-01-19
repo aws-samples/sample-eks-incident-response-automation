@@ -58,27 +58,27 @@ def handler(event, context):
     output = input_body.copy()
     ddb_client = create_aws_client("dynamodb")
     fds = ForensicDataService(
-            ddb_client=ddb_client,
-            ddb_table_name=os.environ["INSTANCE_TABLE_NAME"],
-            auto_notify_subscribers=(
-                True
-                if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
-                else False
-            ),
-            appsync_api_endpoint_url=os.environ.get(
-                "APPSYNC_API_ENDPOINT", "API_NOT_ENABLED"
-            ),
+        ddb_client=ddb_client,
+        ddb_table_name=os.environ["INSTANCE_TABLE_NAME"],
+        auto_notify_subscribers=(
+            True
+            if os.environ.get("APPSYNC_API_SUBSCRIPTION_NOTIFICATIONS")
+            else False
+        ),
+        appsync_api_endpoint_url=os.environ.get(
+            "APPSYNC_API_ENDPOINT", "API_NOT_ENABLED"
+        ),
     )
     forensic_id = input_body.get("forensicId")
     forensic_record = fds.get_forensic_record(
         record_id=forensic_id, metadata_only=True
     )
     if "clusterInfo" in input_body:
-        resource_type = input_body['clusterInfo']['affectedResourceType']
+        resource_type = input_body["clusterInfo"]["affectedResourceType"]
         current_account = context.invoked_function_arn.split(":")[4]
         cluster_account = input_body["instanceAccount"]
         cluster_region = input_body["instanceRegion"]
-        app_account_role_arn = f'arn:aws:iam::{cluster_account}:role/ForensicEc2AllowAccessRole-us-east-1'
+        app_account_role_arn = f"arn:aws:iam::{cluster_account}:role/ForensicEc2AllowAccessRole-us-east-1"
         eks_client = create_aws_client(
             "eks",
             current_account=current_account,
@@ -100,10 +100,10 @@ def handler(event, context):
             target_region=cluster_region,
             app_account_role=app_account_role,
         )
-        # Containment of Pods , Nodes attached to that 
+        # Containment of Pods , Nodes attached to that
         if resource_type == "Pods" or "Deployment" or "ServiceAccount":
             try:
-                # Label the pod to be Qurantined 
+                # Label the pod to be Qurantined
                 eks_label_pod(input_body, eks_client, app_account_role_arn)
                 # Qurantine Pod with network deny policy and IAM role revocation
                 eks_pod_containtment(
@@ -143,19 +143,31 @@ def handler(event, context):
             try:
                 # Cordon the node
                 eks_cordon_node(input_body, eks_client, app_account_role_arn)
-                # Revoke session credentials from IAM Role 
-                invalid_existing_credential_sessions(iam_client, forensic_record)
-                instance_id = input_body.get("instanceInfo")[0].get("InstanceId")
-                recorded_sgs = input_body.get("instanceInfo")[0].get("SecurityGroups")
-                recorded_enis = input_body.get("instanceInfo")[0].get("NetworkInterfaces")
+                # Revoke session credentials from IAM Role
+                invalid_existing_credential_sessions(
+                    iam_client, forensic_record
+                )
+                instance_id = input_body.get("instanceInfo")[0].get(
+                    "InstanceId"
+                )
+                recorded_sgs = input_body.get("instanceInfo")[0].get(
+                    "SecurityGroups"
+                )
+                recorded_enis = input_body.get("instanceInfo")[0].get(
+                    "NetworkInterfaces"
+                )
                 sg_for_eni = [
                     {
-                        "SecurityGroup": [sg.get("GroupId") for sg in item.get("Groups")],
+                        "SecurityGroup": [
+                            sg.get("GroupId") for sg in item.get("Groups")
+                        ],
                         "ENI_ID": item.get("NetworkInterfaceId"),
                     }
                     for item in recorded_enis
                 ]
-                original_sg_ids = [item.get("GroupId") for item in recorded_sgs]
+                original_sg_ids = [
+                    item.get("GroupId") for item in recorded_sgs
+                ]
                 forensic_isolation_instance_profile_name = os.environ[
                     "FORENSIC_ISOLATION_INSTANCE_PROFILE_NAME"
                 ]
@@ -171,7 +183,9 @@ def handler(event, context):
                 (
                     isolation_sg,
                     isolation_sg_no_rule,
-                ) = get_required_isolation_security_groups(ec2_client, instance_vpc)
+                ) = get_required_isolation_security_groups(
+                    ec2_client, instance_vpc
+                )
 
                 logger.info(
                     f"isolating instance {instance_id}, step1 converting all traffic to untracked"
@@ -182,7 +196,8 @@ def handler(event, context):
                         NetworkInterfaceId=eni_id, Groups=[isolation_sg]
                     )
                     ec2_client.modify_network_interface_attribute(
-                        NetworkInterfaceId=eni_id, Groups=[isolation_sg_no_rule]
+                        NetworkInterfaceId=eni_id,
+                        Groups=[isolation_sg_no_rule],
                     )
 
                 detach_eip_from_instance(instance_id, ec2_client)
@@ -237,7 +252,9 @@ def handler(event, context):
         recorded_enis = input_body.get("instanceInfo").get("NetworkInterfaces")
         sg_for_eni = [
             {
-                "SecurityGroup": [sg.get("GroupId") for sg in item.get("Groups")],
+                "SecurityGroup": [
+                    sg.get("GroupId") for sg in item.get("Groups")
+                ],
                 "ENI_ID": item.get("NetworkInterfaceId"),
             }
             for item in recorded_enis
@@ -282,7 +299,9 @@ def handler(event, context):
             (
                 isolation_sg,
                 isolation_sg_no_rule,
-            ) = get_required_isolation_security_groups(ec2_client, instance_vpc)
+            ) = get_required_isolation_security_groups(
+                ec2_client, instance_vpc
+            )
 
             logger.info(
                 f"isolating instance {instance_id}, step1 converting all traffic to untracked"
@@ -581,7 +600,7 @@ def eks_label_pod(input_body, eks_client, cluster_admin_role_arn):
 def eks_cordon_node(input_body, eks_client, cluster_admin_role_arn):
     affected_cluster = input_body["clusterInfo"]["clusterName"]
     affected_pod_list = input_body["clusterInfo"]["affectedPodResource"]
-    namespace = input_body["clusterInfo"]['affectedPodResourceNamespace']
+    namespace = input_body["clusterInfo"]["affectedPodResourceNamespace"]
     get_kubeconfig = get_eks_credentials(
         affected_cluster, eks_client, cluster_admin_role_arn
     )
@@ -602,18 +621,21 @@ def eks_cordon_node(input_body, eks_client, cluster_admin_role_arn):
             api_instance.patch_node(node_name, body)
             time.sleep(10)
 
+
 def invalid_existing_credential_sessions(iam_client, forensic_record):
     resource_type = forensic_record.resourceType
-    if resource_type == 'INSTANCE':
+    if resource_type == "INSTANCE":
         instance_profile = forensic_record.resourceInfo["IamInstanceProfile"]
-        instance_profile_arn = forensic_record.resourceInfo["IamInstanceProfile"][
-        "Arn"
-    ]
+        instance_profile_arn = forensic_record.resourceInfo[
+            "IamInstanceProfile"
+        ]["Arn"]
     else:
-        instance_profile = forensic_record.resourceInfo[0]['IamInstanceProfile']
-        instance_profile_arn = forensic_record.resourceInfo[0]["IamInstanceProfile"][
-        "Arn"
-    ]
+        instance_profile = forensic_record.resourceInfo[0][
+            "IamInstanceProfile"
+        ]
+        instance_profile_arn = forensic_record.resourceInfo[0][
+            "IamInstanceProfile"
+        ]["Arn"]
     if not instance_profile:
         return
     parsed_arn = arnparse(instance_profile_arn)

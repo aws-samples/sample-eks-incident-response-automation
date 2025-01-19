@@ -39,32 +39,50 @@ windows_memory_acquisition_document_name = os.environ[
     "WINDOWS_LIME_MEMORY_LOAD_INVESTIGATION"
 ]
 
+
 @xray_recorder.capture("Run Memory Forensics")
 def handler(event, _):
     """
     Lambda function handler for performing Memory Forensic Analysis
     """
     input_body = event["Payload"]["body"]
-    
-    if 'clusterInfo' in input_body:
-        for each_instance_id in input_body['ForensicInstanceIds']:
-            for each_instance_info in input_body['instanceInfo']:
-                if each_instance_info['InstanceId'] == each_instance_id:
+
+    if "clusterInfo" in input_body:
+        for each_instance_id in input_body["ForensicInstanceIds"]:
+            for each_instance_info in input_body["instanceInfo"]:
+                if each_instance_info["InstanceId"] == each_instance_id:
                     platform_name = each_instance_info["PlatformName"]
                     platform_version = each_instance_info["PlatformVersion"]
                     platform_detail = each_instance_info["PlatformDetails"]
                     break
-            output_body = perform_memory_investigation(each_instance_id, platform_name, platform_version, platform_detail, event)
+            output_body = perform_memory_investigation(
+                each_instance_id,
+                platform_name,
+                platform_version,
+                platform_detail,
+                event,
+            )
         return create_response(200, output_body)
     else:
-        instance_id = input_body['ForensicInstanceIds'][0]
+        instance_id = input_body["ForensicInstanceIds"][0]
         platform_name = input_body.get("instanceInfo").get("PlatformName")
-        platform_version = input_body.get("instanceInfo").get("PlatformVersion")
+        platform_version = input_body.get("instanceInfo").get(
+            "PlatformVersion"
+        )
         platform_detail = input_body.get("instanceInfo").get("PlatformDetails")
-        output_body = perform_memory_investigation(instance_id, platform_name, platform_version, platform_detail, event)
+        output_body = perform_memory_investigation(
+            instance_id,
+            platform_name,
+            platform_version,
+            platform_detail,
+            event,
+        )
         return create_response(200, output_body)
 
-def perform_memory_investigation(instance_id, platform_name, platform_version, platform_detail, event):
+
+def perform_memory_investigation(
+    instance_id, platform_name, platform_version, platform_detail, event
+):
     if platform_detail == "Windows":
         memory_load_document_name = windows_memory_acquisition_document_name
     elif platform_name == "Red Hat Enterprise Linux":
@@ -78,7 +96,9 @@ def perform_memory_investigation(instance_id, platform_name, platform_version, p
             "RHEL" + rhel_version + "_LIME_MEMORY_LOAD_INVESTIGATION"
         ]
     else:
-        memory_load_document_name = os.environ["LIME_MEMORY_LOAD_INVESTIGATION"]
+        memory_load_document_name = os.environ[
+            "LIME_MEMORY_LOAD_INVESTIGATION"
+        ]
     fds = ForensicDataService(
         ddb_client=create_aws_client("dynamodb"),
         ddb_table_name=os.environ["INSTANCE_TABLE_NAME"],
@@ -96,10 +116,10 @@ def perform_memory_investigation(instance_id, platform_name, platform_version, p
     input_body = event["Payload"]["body"]
     forensic_id = input_body["forensicId"]
     s3_role_arn = os.environ["S3_COPY_ROLE"]
-    logger.info(f'The input body is {input_body}')
-    input_artifact_id = input_body['InstanceResults'][instance_id]['MemoryAcquisition'][
-        "CommandInputArtifactId"
-    ]
+    logger.info(f"The input body is {input_body}")
+    input_artifact_id = input_body["InstanceResults"][instance_id][
+        "MemoryAcquisition"
+    ]["CommandInputArtifactId"]
     forensic_type = input_body["forensicType"]
     output_body = input_body.copy()
 
@@ -120,7 +140,6 @@ def perform_memory_investigation(instance_id, platform_name, platform_version, p
             item["InstanceId"] == forensic_investigation_instance_id
             for item in response["InstanceInformationList"]
         )
-
 
         output_body["forensicId"] = forensic_id
         output_body["ForensicInstanceId"] = instance_id
@@ -194,9 +213,13 @@ def perform_memory_investigation(instance_id, platform_name, platform_version, p
                 "CommandInputArtifactId": input_artifact_id,
             }
 
-            output_body['InstanceResults'][instance_id]["MemoryInvestigation"] = {}
-            output_body['InstanceResults'][instance_id]["MemoryInvestigation"]["CommandId"] = cmd_id
-            output_body['InstanceResults'][instance_id]["MemoryInvestigation"][
+            output_body["InstanceResults"][instance_id][
+                "MemoryInvestigation"
+            ] = {}
+            output_body["InstanceResults"][instance_id]["MemoryInvestigation"][
+                "CommandId"
+            ] = cmd_id
+            output_body["InstanceResults"][instance_id]["MemoryInvestigation"][
                 "CommandIdArtifactMap"
             ] = ssm_cmd_artifact_map
 

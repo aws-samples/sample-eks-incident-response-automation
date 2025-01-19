@@ -151,8 +151,8 @@ def lambda_handler(event, context):
         elif resource_type == "AwsEksCluster":
             cluster_in_scope, event = is_single_eks_cluster_in_scope(event)
 
-            logger.info(f'EKS cluster in scope is {cluster_in_scope}')
-            logger.info(f'Event is {event}')
+            logger.info(f"EKS cluster in scope is {cluster_in_scope}")
+            logger.info(f"Event is {event}")
 
             cluster_name, cluster_account, cluster_region = (
                 get_cluster_details(event)
@@ -188,7 +188,7 @@ def lambda_handler(event, context):
             ) = get_affected_resource_in_cluster(
                 event, cluster_name, eks_client, app_account_role_arn
             )
-            
+
             if affected_cluster_resource_type == "Node":
                 affected_node_info = event["detail"]["findings"][0][
                     "Resources"
@@ -339,7 +339,9 @@ def lambda_handler(event, context):
                 "forensicId": forensic_record.id,
                 "instanceAccount": cluster_account,
                 "instanceRegion": cluster_region,
-                "isAcquisitionRequired": is_triage_required_eks(affected_instance_info_list),
+                "isAcquisitionRequired": is_triage_required_eks(
+                    affected_instance_info_list
+                ),
                 "isIsolationNeeded": isolation_needed,
             },
         )
@@ -417,7 +419,9 @@ def is_ec2_or_eks_in_scope(event):
         if each_resource not in ["AwsEc2Instance", "AwsEksCluster"]:
             resource_types.remove(each_resource)
     if len(resource_types) > 1:
-        raise ValueError(f"More than one instance or EKS cluster in-scope for event: {event}")
+        raise ValueError(
+            f"More than one instance or EKS cluster in-scope for event: {event}"
+        )
     return resource_types[0]
 
 
@@ -442,6 +446,7 @@ def is_single_ec2_instance_in_scope(event):
 
     return instances
 
+
 def is_single_eks_cluster_in_scope(event):
     findings = event["detail"]["findings"]
     eksclusters = []
@@ -454,9 +459,10 @@ def is_single_eks_cluster_in_scope(event):
                 if resource.get("Type") == "AwsEksCluster"
             ]
         )
-    
+
     filtered_resources = [
-        resource for resource in event["detail"]["findings"][0]["Resources"]
+        resource
+        for resource in event["detail"]["findings"][0]["Resources"]
         if resource.get("Type") == "AwsEksCluster"
     ]
     event["detail"]["findings"][0]["Resources"] = filtered_resources
@@ -709,7 +715,9 @@ def get_affected_resource_in_cluster(
             "kubernetesDetails/kubernetesUserDetails/username"
         ]
         service_account = service_account_name_detail.split(":")[-1]
-        affected_resource_namespace = service_account_name_detail.split(":")[-2]
+        affected_resource_namespace = service_account_name_detail.split(":")[
+            -2
+        ]
         affected_pod = get_affected_pods(
             affected_resource_type,
             clustername,

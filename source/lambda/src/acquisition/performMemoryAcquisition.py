@@ -24,14 +24,18 @@ from ..common.awsapi_cached_client import create_aws_client
 from ..common.common import clean_date_format, create_response
 from ..common.exception import MemoryAcquisitionError
 from ..common.log import get_logger
+from ..common.node_processing import (
+    normalize_instance_ids,
+    normalize_instance_info,
+)
 from ..data.datatypes import ForensicCategory, ForensicsProcessingPhase
 from ..data.service import ForensicDataService
-from ..common.node_processing import normalize_instance_ids, normalize_instance_info
 
 # initialise loggers
 logger = get_logger(__name__)
 
 instance_id = ""
+
 
 @xray_recorder.capture("Perform Memory Acquisition")
 def handler(event, context):
@@ -99,7 +103,7 @@ def handler(event, context):
         ]
 
         logger.info("Lambda running")
-        
+
         output_body["forensicId"] = forensic_id
         output_body["ForensicInstanceIds"] = instance_ids
         output_body["InstanceResults"] = {}
@@ -112,7 +116,9 @@ def handler(event, context):
         # )
 
         # Normalize instance info to always work with a dictionary
-        instances_info = normalize_instance_info(input_body.get("instanceInfo"))
+        instances_info = normalize_instance_info(
+            input_body.get("instanceInfo")
+        )
 
         response = ssm_client.describe_instance_information(
             Filters=[{"Key": "InstanceIds", "Values": instance_ids}]
@@ -121,7 +127,9 @@ def handler(event, context):
         for item in response["InstanceInformationList"]:
             instance_id = item["InstanceId"]
             ssm_enabled_instances[instance_id] = True
-            output_body["InstanceResults"][instance_id] = {"SSM_STATUS": "SUCCEEDED"}
+            output_body["InstanceResults"][instance_id] = {
+                "SSM_STATUS": "SUCCEEDED"
+            }
 
         # if platform_detail == "Windows":
         #     memory_acquisition_document_name = (
@@ -142,16 +150,18 @@ def handler(event, context):
             try:
                 if not ssm_enabled_instances.get(instance_id):
                     output_body["InstanceResults"][instance_id] = {
-                        "SSM_STATUS": "FAILED", 
-                        "error": "SSM not installed"
+                        "SSM_STATUS": "FAILED",
+                        "error": "SSM not installed",
                     }
-                    logger.warning(f"SSM not installed on instance {instance_id}")
+                    logger.warning(
+                        f"SSM not installed on instance {instance_id}"
+                    )
                     continue
                 # Get instance info from normalized dictionary
                 instance_info = instances_info.get(instance_id, {})
                 platform_name = instance_info.get("PlatformName")
                 platform_detail = instance_info.get("PlatformDetails")
-                platform_version = instance_info.get("PlatformVersion")            
+                platform_version = instance_info.get("PlatformVersion")
                 if platform_detail == "Windows":
                     memory_acquisition_document_name = (
                         windows_memory_acquisition_document_name
@@ -210,7 +220,10 @@ def handler(event, context):
                         {
                             "Sid": "S3LeastListPrivilege",
                             "Effect": "Allow",
-                            "Action": ["s3:ListBucket", "s3:GetBucketLocation"],
+                            "Action": [
+                                "s3:ListBucket",
+                                "s3:GetBucketLocation",
+                            ],
                             "Resource": [f"arn:aws:s3:::{s3bucket_name}"],
                         },
                         {
@@ -280,16 +293,23 @@ def handler(event, context):
                 #         "SSMDocumentName": memory_acquisition_document_name,
                 #     }
                 # }
-                if "MemoryAcquisition" not in output_body["InstanceResults"][instance_id]:
-                    output_body["InstanceResults"][instance_id]["MemoryAcquisition"] = {}
-                output_body["InstanceResults"][instance_id]["MemoryAcquisition"] = {
+                if (
+                    "MemoryAcquisition"
+                    not in output_body["InstanceResults"][instance_id]
+                ):
+                    output_body["InstanceResults"][instance_id][
+                        "MemoryAcquisition"
+                    ] = {}
+                output_body["InstanceResults"][instance_id][
+                    "MemoryAcquisition"
+                ] = {
                     "CommandId": cmd_id,
                     "CommandIdArtifactMap": {
                         cmd_id: {
                             "Prefix": s3_prefix,
                             "SSMDocumentName": memory_acquisition_document_name,
                         }
-                    }
+                    },
                 }
 
                 logger.info(output_body)
@@ -297,10 +317,12 @@ def handler(event, context):
                 # else:
                 #     raise RuntimeError("SSM Not installed")
             except Exception as e:
-                logger.error(f"Error processing instance {instance_id}: {str(e)}")
+                logger.error(
+                    f"Error processing instance {instance_id}: {str(e)}"
+                )
                 output_body["InstanceResults"][instance_id] = {
                     "SSM_STATUS": "FAILED",
-                    "error": str(e)
+                    "error": str(e),
                 }
     except Exception as e:
         exception_type = e.__class__.__name__

@@ -69,12 +69,19 @@ def handler(event, context):
             )
         if "clusterInfo" in input_body:
             for instance_id in input_body:
-                if isinstance(input_body[instance_id], dict) and "snapshotIds" in input_body[instance_id]:
+                if (
+                    isinstance(input_body[instance_id], dict)
+                    and "snapshotIds" in input_body[instance_id]
+                ):
                     instance_data = input_body[instance_id]
                     snapshot_ids = instance_data.get("snapshotIds")
-                    snapshot_artifact_map = instance_data.get("snapshotArtifactMap")
+                    snapshot_artifact_map = instance_data.get(
+                        "snapshotArtifactMap"
+                    )
                     input_body[instance_id]["snapshotIdsShared"] = snapshot_ids
-                    input_body[instance_id]["snapshotArtifactMap"] = snapshot_artifact_map
+                    input_body[instance_id][
+                        "snapshotArtifactMap"
+                    ] = snapshot_artifact_map
                     for snapshot_id in snapshot_ids:
                         response = _share_snapshot(
                             ec2_client=ec2_client,
