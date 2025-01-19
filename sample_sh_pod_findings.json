@@ -3,22 +3,22 @@
     "id": "225b06f5-d216-d572-52e7-fe1ecfcd4e0e",
     "detail-type": "Security Hub Findings - Custom Action",
     "source": "aws.securityhub",
-    "account": "058264133586",
+    "account": "<sechub-accountId>",
     "time": "2024-12-04T23:52:18Z",
-    "region": "us-east-1",
+    "region": "<region-name>",
     "resources": [
-      "arn:aws:securityhub:us-east-1:058264133586:action/custom/ForensicTriageAction"
+      "arn:aws:securityhub:<region-name>:<sechub-accountId>:action/custom/ForensicTriageAction"
     ],
     "detail": {
       "actionName": "Forensic Triage",
       "actionDescription": "Trigger Forensic Triage Action",
       "findings": [
         {
-          "ProductArn": "arn:aws:securityhub:us-east-1::product/aws/guardduty",
+          "ProductArn": "arn:aws:securityhub:<region-name>::product/aws/guardduty",
           "Types": [
             "TTPs/Execution/Execution:Kubernetes-ExecInKubeSystemPod"
           ],
-          "SourceUrl": "https://us-east-1.console.aws.amazon.com/guardduty/home?region=us-east-1#/findings?macros=current&fId=c7f427fd1eb14e36942c3083c5fe7861",
+          "SourceUrl": "https://<region-name>.console.aws.amazon.com/guardduty/home?region=<region-name>#/findings?macros=current&fId=c7f427fd1eb14e36942c3083c5fe7861",
           "Description": "A command was executed inside a pod in the kube-system namespace on EKS Cluster GeneratedFindingEKSClusterName. If this behavior is not expected, it may indicate that your credentials are compromised.",
           "ProductName": "GuardDuty",
           "FirstObservedAt": "2024-10-03T14:40:08.000Z",
@@ -66,12 +66,12 @@
             "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/geoLocation/lon": "0",
             "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/org": "GeneratedFindingORG",
             "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/asnOrg": "GeneratedFindingASNOrg",
-            "aws/securityhub/FindingId": "arn:aws:securityhub:us-east-1::product/aws/guardduty/arn:aws:guardduty:us-east-1:158507795726:detector/58c54ab46d0b667fe47a2d82745538a3/finding/c7f427fd1eb14e36942c3083c5fe7861",
+            "aws/securityhub/FindingId": "arn:aws:securityhub:<region-name>::product/aws/guardduty/arn:aws:guardduty:<region-name>:<app-accountId>:detector/58c54ab46d0b667fe47a2d82745538a3/finding/c7f427fd1eb14e36942c3083c5fe7861",
             "aws/securityhub/ProductName": "GuardDuty",
             "aws/securityhub/CompanyName": "Amazon"
           },
           "SchemaVersion": "2018-10-08",
-          "GeneratorId": "arn:aws:guardduty:us-east-1:158507795726:detector/58c54ab46d0b667fe47a2d82745538a3",
+          "GeneratorId": "arn:aws:guardduty:<region-name>:<app-accountId>:detector/58c54ab46d0b667fe47a2d82745538a3",
           "Sample": true,
           "RecordState": "ACTIVE",
           "Title": "A command was executed inside a pod in the kube-system namespace.",
@@ -86,9 +86,9 @@
           "UpdatedAt": "2024-12-04T23:48:32.651Z",
           "WorkflowState": "NEW",
           "AwsAccountName": "container-ir-automation",
-          "AwsAccountId": "158507795726",
-          "Region": "us-east-1",
-          "Id": "arn:aws:guardduty:us-east-1:158507795726:detector/58c54ab46d0b667fe47a2d82745538a3/finding/c7f427fd1eb14e36942c3083c5fe7861",
+          "AwsAccountId": "<app-accountId>",
+          "Region": "<region-name>",
+          "Id": "arn:aws:guardduty:<region-name>:<app-accountId>:detector/58c54ab46d0b667fe47a2d82745538a3/finding/c7f427fd1eb14e36942c3083c5fe7861",
           "Resources": [
             {
               "Partition": "aws",
@@ -97,7 +97,7 @@
                 "Other": {
                   "kubernetesDetails/kubernetesUserDetails/groups.0_": "system:masters",
                   "kubernetesDetails/kubernetesUserDetails/username": "kubernetes-admin",
-                  "kubernetesDetails/kubernetesUserDetails/uid": "aws-iam-authenticator:158507795726:AROASJZ6NAUHFFIFPO57C",
+                  "kubernetesDetails/kubernetesUserDetails/uid": "aws-iam-authenticator:<app-accountId>:AROASJZ6NAUHFFIFPO57C",
                   "kubernetesDetails/kubernetesWorkloadDetails/name": "catalog-9748665d5-sbtfx",
                   "kubernetesDetails/kubernetesWorkloadDetails/namespace": "default",
                   "kubernetesDetails/kubernetesUserDetails/groups.1_": "system:authenticated",
@@ -106,13 +106,13 @@
                   "kubernetesDetails/kubernetesUserDetails/sessionName.0_": "colinms-Isengard"
                 },
                 "AwsEksCluster": {
-                  "Arn": "arn:aws:eks:us-east-1:158507795726:cluster/eks-workshop",
+                  "Arn": "arn:aws:eks:<region-name>:<app-accountId>:cluster/eks-workshop",
                   "ClusterStatus": "ACTIVE",
                   "Name": "eks-workshop"
                 }
               },
-              "Region": "us-east-1",
-              "Id": "arn:aws:eks:us-east-1:158507795726:cluster/eks-workshop",
+              "Region": "<region-name>",
+              "Id": "arn:aws:eks:<region-name>:<app-accountId>:cluster/eks-workshop",
               "Tags": {
                 "GeneratedFindingEKSClusterTag1": "GeneratedFindingEKSClusterTagValue1",
                 "GeneratedFindingEKSClusterTag2": "GeneratedFindingEKSClusterTagValue2",

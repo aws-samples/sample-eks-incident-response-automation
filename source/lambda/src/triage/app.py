@@ -149,6 +149,11 @@ def lambda_handler(event, context):
             )
 
         elif resource_type == "AwsEksCluster":
+            cluster_in_scope, event = is_single_eks_cluster_in_scope(event)
+
+            logger.info(f'EKS cluster in scope is {cluster_in_scope}')
+            logger.info(f'Event is {event}')
+
             cluster_name, cluster_account, cluster_region = (
                 get_cluster_details(event)
             )
@@ -408,9 +413,11 @@ def is_ec2_or_eks_in_scope(event):
             resource_types.append(resource["Type"])
     if not resource_types:
         raise ValueError(f"Invalid trigger event: {event}")
-
+    for each_resource in resource_types:
+        if each_resource not in ["AwsEc2Instance", "AwsEksCluster"]:
+            resource_types.remove(each_resource)
     if len(resource_types) > 1:
-        raise ValueError(f"More than one instance in-scope for event: {event}")
+        raise ValueError(f"More than one instance or EKS cluster in-scope for event: {event}")
     return resource_types[0]
 
 
@@ -434,6 +441,32 @@ def is_single_ec2_instance_in_scope(event):
         raise ValueError(f"More than one instance in-scope for event: {event}")
 
     return instances
+
+def is_single_eks_cluster_in_scope(event):
+    findings = event["detail"]["findings"]
+    eksclusters = []
+
+    for finding in findings:
+        eksclusters.extend(
+            [
+                resource
+                for resource in finding["Resources"]
+                if resource.get("Type") == "AwsEksCluster"
+            ]
+        )
+    
+    filtered_resources = [
+        resource for resource in event["detail"]["findings"][0]["Resources"]
+        if resource.get("Type") == "AwsEksCluster"
+    ]
+    event["detail"]["findings"][0]["Resources"] = filtered_resources
+    if not eksclusters:
+        raise ValueError(f"Invalid trigger event: {event}")
+
+    if len(eksclusters) > 1:
+        raise ValueError(f"More than one instance in-scope for event: {event}")
+
+    return eksclusters, event
 
 
 def get_cluster_details(event):
@@ -696,7 +729,7 @@ def get_affected_resource_in_cluster(
         ]["Details"]["Other"][
             "kubernetesDetails/kubernetesWorkloadDetails/type"
         ].lower()
-        if affected_resource_type == "deployment":
+        if affected_resource_type == "deployments" or "deployment":
             logger.info("Deployment resource detected")
             affected_resource_type = "Deployment"
             affected_deployment = event["detail"]["findings"][0]["Resources"][

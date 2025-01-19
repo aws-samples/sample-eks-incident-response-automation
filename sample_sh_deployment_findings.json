@@ -1,128 +1,140 @@
 {
-    "version": "0",
-    "id": "225b06f5-d216-d572-52e7-fe1ecfcd4e0e",
-    "detail-type": "Security Hub Findings - Custom Action",
-    "source": "aws.securityhub",
-    "account": "058264133586",
-    "time": "2024-12-04T23:52:18Z",
-    "region": "us-east-1",
-    "resources": [
-      "arn:aws:securityhub:us-east-1:058264133586:action/custom/ForensicTriageAction"
+  "AwsAccountId": "<account-id>",
+  "AwsAccountName": "container-ir-automation",
+  "CompanyName": "Amazon",
+  "CreatedAt": "2025-01-16T13:38:34.463Z",
+  "Description": "A container with a sensitive host path mounted inside was launched on EKS Cluster eks-workshop. If this behavior is not expected, it may indicate that your credentials are compromised.",
+  "FindingProviderFields": {
+    "Types": [
+      "TTPs/Persistence/Persistence:Kubernetes-ContainerWithSensitiveMount"
     ],
-    "detail": {
-      "actionName": "Forensic Triage",
-      "actionDescription": "Trigger Forensic Triage Action",
-      "findings": [
-        {
-          "ProductArn": "arn:aws:securityhub:us-east-1::product/aws/guardduty",
-          "Types": [
-            "TTPs/Execution/Execution:Kubernetes-ExecInKubeSystemPod"
-          ],
-          "SourceUrl": "https://us-east-1.console.aws.amazon.com/guardduty/home?region=us-east-1#/findings?macros=current&fId=c7f427fd1eb14e36942c3083c5fe7861",
-          "Description": "A command was executed inside a pod in the kube-system namespace on EKS Cluster GeneratedFindingEKSClusterName. If this behavior is not expected, it may indicate that your credentials are compromised.",
-          "ProductName": "GuardDuty",
-          "FirstObservedAt": "2024-10-03T14:40:08.000Z",
-          "CreatedAt": "2024-10-03T14:40:08.389Z",
-          "LastObservedAt": "2024-12-04T23:48:32.000Z",
-          "CompanyName": "Amazon",
-          "FindingProviderFields": {
-            "Types": [
-              "TTPs/Execution/Execution:Kubernetes-ExecInKubeSystemPod"
-            ],
-            "Severity": {
-              "Normalized": 50,
-              "Label": "MEDIUM",
-              "Product": 5
-            }
-          },
-          "ProductFields": {
-            "aws/guardduty/service/archived": "false",
-            "aws/guardduty/service/additionalInfo/value": "{\"sample\":true}",
-            "aws/guardduty/service/action/kubernetesApiCallAction/verb": "create",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/country/countryName": "GeneratedFindingCountryName",
-            "aws/guardduty/service/action/kubernetesApiCallAction/sourceIPs.0_": "10.0.0.23",
-            "aws/guardduty/service/action/kubernetesApiCallAction/sourceIPs.2_": "10.0.0.25",
-            "aws/guardduty/service/serviceName": "guardduty",
-            "aws/guardduty/service/evidence": "",
-            "aws/guardduty/service/detectorId": "58c54ab46d0b667fe47a2d82745538a3",
-            "aws/guardduty/service/action/kubernetesApiCallAction/requestUri": "GeneratedFindingRequestURI",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/city/cityName": "GeneratedFindingCityName",
-            "aws/guardduty/service/eventFirstSeen": "2024-10-03T14:40:08.000Z",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/isp": "GeneratedFindingISP",
-            "aws/guardduty/service/eventLastSeen": "2024-12-04T23:48:32.000Z",
-            "aws/guardduty/service/action/actionType": "KUBERNETES_API_CALL",
-            "aws/guardduty/service/action/kubernetesApiCallAction/userAgent": "",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/asn": "0",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/ipAddressV4": "198.51.100.0",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/geoLocation/lat": "0",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/ipAddressV6": "1234:5678:90ab:cdef:1234:5678:90ab:cde0",
-            "aws/guardduty/service/resourceRole": "TARGET",
-            "aws/guardduty/service/action/kubernetesApiCallAction/sourceIPs.3_": "10.0.0.26",
-            "aws/guardduty/service/action/kubernetesApiCallAction/statusCode": "101",
-            "aws/guardduty/service/action/kubernetesApiCallAction/sourceIPs.1_": "10.0.0.24",
-            "aws/guardduty/service/count": "2",
-            "aws/guardduty/service/additionalInfo/sample": "true",
-            "aws/guardduty/service/additionalInfo/type": "default",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/geoLocation/lon": "0",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/org": "GeneratedFindingORG",
-            "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/asnOrg": "GeneratedFindingASNOrg",
-            "aws/securityhub/FindingId": "arn:aws:securityhub:us-east-1::product/aws/guardduty/arn:aws:guardduty:us-east-1:158507795726:detector/58c54ab46d0b667fe47a2d82745538a3/finding/c7f427fd1eb14e36942c3083c5fe7861",
-            "aws/securityhub/ProductName": "GuardDuty",
-            "aws/securityhub/CompanyName": "Amazon"
-          },
-          "SchemaVersion": "2018-10-08",
-          "GeneratorId": "arn:aws:guardduty:us-east-1:158507795726:detector/58c54ab46d0b667fe47a2d82745538a3",
-          "Sample": true,
-          "RecordState": "ACTIVE",
-          "Title": "A command was executed inside a pod in the kube-system namespace.",
-          "Workflow": {
-            "Status": "NEW"
-          },
-          "Severity": {
-            "Normalized": 50,
-            "Label": "MEDIUM",
-            "Product": 5
-          },
-          "UpdatedAt": "2024-12-04T23:48:32.651Z",
-          "WorkflowState": "NEW",
-          "AwsAccountName": "container-ir-automation",
-          "AwsAccountId": "158507795726",
-          "Region": "us-east-1",
-          "Id": "arn:aws:guardduty:us-east-1:158507795726:detector/58c54ab46d0b667fe47a2d82745538a3/finding/c7f427fd1eb14e36942c3083c5fe7861",
-          "Resources": [
-            {
-              "Partition": "aws",
-              "Type": "AwsEksCluster",
-              "Details": {
-                "Other": {
-                  "kubernetesDetails/kubernetesUserDetails/groups.0_": "system:masters",
-                  "kubernetesDetails/kubernetesUserDetails/username": "kubernetes-admin",
-                  "kubernetesDetails/kubernetesUserDetails/uid": "aws-iam-authenticator:158507795726:AROASJZ6NAUHFFIFPO57C",
-                  "kubernetesDetails/kubernetesWorkloadDetails/name": "catalog",
-                  "kubernetesDetails/kubernetesWorkloadDetails/namespace": "default",
-                  "kubernetesDetails/kubernetesUserDetails/groups.1_": "system:authenticated",
-                  "kubernetesDetails/kubernetesUserDetails/sessionName.1_": "colinms-Isengard",
-                  "kubernetesDetails/kubernetesWorkloadDetails/type": "Deployment",
-                  "kubernetesDetails/kubernetesUserDetails/sessionName.0_": "colinms-Isengard"
-                },
-                "AwsEksCluster": {
-                  "Arn": "arn:aws:eks:us-east-1:158507795726:cluster/eks-workshop",
-                  "ClusterStatus": "ACTIVE",
-                  "Name": "eks-workshop"
-                }
-              },
-              "Region": "us-east-1",
-              "Id": "arn:aws:eks:us-east-1:158507795726:cluster/eks-workshop",
-              "Tags": {
-                "GeneratedFindingEKSClusterTag1": "GeneratedFindingEKSClusterTagValue1",
-                "GeneratedFindingEKSClusterTag2": "GeneratedFindingEKSClusterTagValue2",
-                "GeneratedFindingEKSClusterTag3": "GeneratedFindingEKSClusterTagValue3",
-                "GeneratedFindingEKSClusterTag4": "GeneratedFindingEKSClusterTagValue4"
-              }
-            }
-          ],
-          "ProcessedAt": "2024-12-04T23:50:04.547Z"
-        }
-      ]
+    "Severity": {
+      "Normalized": 50,
+      "Label": "MEDIUM",
+      "Product": 5
     }
-  }
+  },
+  "FirstObservedAt": "2025-01-16T13:37:19.507Z",
+  "GeneratorId": "arn:aws:guardduty:<region-name>:<account-id>:detector/58c54ab46d0b667fe47a2d82745538a3",
+  "Id": "arn:aws:guardduty:<region-name>:<account-id>:detector/58c54ab46d0b667fe47a2d82745538a3/finding/f0ca37ab26ae68d5528afbbd62e20d74",
+  "LastObservedAt": "2025-01-16T13:37:19.525Z",
+  "ProcessedAt": "2025-01-16T13:40:05.553Z",
+  "ProductArn": "arn:aws:securityhub:<region-name>::product/aws/guardduty",
+  "ProductFields": {
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/asn": "16509",
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/ipAddressV4": "72.21.198.64",
+    "aws/guardduty/service/archived": "false",
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/geoLocation/lat": "39.0469",
+    "aws/guardduty/service/additionalInfo/value": "",
+    "aws/guardduty/service/action/kubernetesApiCallAction/verb": "create",
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/country/countryName": "United States",
+    "aws/guardduty/service/resourceRole": "TARGET",
+    "aws/guardduty/service/action/kubernetesApiCallAction/sourceIPs.0_": "72.21.198.64",
+    "aws/guardduty/service/action/kubernetesApiCallAction/statusCode": "201",
+    "aws/guardduty/service/count": "1",
+    "aws/guardduty/service/additionalInfo/type": "default",
+    "aws/guardduty/service/serviceName": "guardduty",
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/geoLocation/lon": "-77.4903",
+    "aws/guardduty/service/detectorId": "58c54ab46d0b667fe47a2d82745538a3",
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/org": "Amazon Office",
+    "aws/guardduty/service/action/kubernetesApiCallAction/requestUri": "/apis/apps/v1/namespaces/default/deployments",
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/city/cityName": "Ashburn",
+    "aws/guardduty/service/eventFirstSeen": "2025-01-16T13:37:19.507Z",
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/asnOrg": "AMAZON-02",
+    "aws/guardduty/service/action/kubernetesApiCallAction/remoteIpDetails/organization/isp": "Amazon Office",
+    "aws/guardduty/service/eventLastSeen": "2025-01-16T13:37:19.525Z",
+    "aws/guardduty/service/action/actionType": "KUBERNETES_API_CALL",
+    "aws/guardduty/service/action/kubernetesApiCallAction/userAgent": "kubectl/v1.30.2 (darwin/arm64) kubernetes/3968350",
+    "aws/securityhub/FindingId": "arn:aws:securityhub:<region-name>::product/aws/guardduty/arn:aws:guardduty:<region-name>:<account-id>:detector/58c54ab46d0b667fe47a2d82745538a3/finding/f0ca37ab26ae68d5528afbbd62e20d74",
+    "aws/securityhub/ProductName": "GuardDuty",
+    "aws/securityhub/CompanyName": "Amazon"
+  },
+  "ProductName": "GuardDuty",
+  "RecordState": "ACTIVE",
+  "Region": "<region-name>",
+  "Resources": [
+    {
+      "Details": {
+        "AwsIamAccessKey": {
+          "PrincipalName": "Admin",
+          "PrincipalType": "Unknown"
+        }
+      },
+      "Id": "AWS::IAM::AccessKey:<accesskeyId>",
+      "Partition": "aws",
+      "Region": "<region-name>",
+      "Type": "AwsIamAccessKey"
+    },
+    {
+      "Details": {
+        "AwsEksCluster": {
+          "Arn": "arn:aws:eks:<region-name>:<account-id>:cluster/eks-workshop",
+          "ClusterStatus": "ACTIVE",
+          "Name": "eks-workshop"
+        },
+        "Other": {
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/volumeMounts.0_/mountPath": "/test-pd",
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/id": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/selector": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/namespace": "default",
+          "kubernetesDetails/kubernetesWorkloadDetails/hostPID": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/creationTimestamp": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/type": "deployments",
+          "kubernetesDetails/kubernetesUserDetails/sessionName.0_": "gopinjag-Isengard",
+          "kubernetesDetails/kubernetesWorkloadDetails/volumes.0_/name": "test-volume",
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/containerRuntime": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/hostNetwork": "false",
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/securityContext": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/imagePrefix": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/name": "mount",
+          "kubernetesDetails/kubernetesWorkloadDetails/hostIPC": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/labels": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/volumeMounts.0_/name": "test-volume",
+          "kubernetesDetails/kubernetesUserDetails/groups.0_": "system:authenticated",
+          "kubernetesDetails/kubernetesWorkloadDetails/volumes.0_/hostPath/path": "/etc",
+          "kubernetesDetails/kubernetesWorkloadDetails/uid": "1b52bcc6-2189-417d-a049-210d1dc3e9eb",
+          "kubernetesDetails/kubernetesWorkloadDetails/podSecurityContext": "",
+          "kubernetesDetails/kubernetesUserDetails/username": "arn:aws:sts::<account-id>:assumed-role/Admin/gopinjag-Isengard",
+          "kubernetesDetails/kubernetesUserDetails/uid": "aws-iam-authenticator:<account-id>:AROASJZ6NAUHFFIFPO57C",
+          "kubernetesDetails/kubernetesWorkloadDetails/name": "mount",
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/imageUid": "",
+          "kubernetesDetails/kubernetesWorkloadDetails/containers.0_/image": "nginx"
+        }
+      },
+      "Id": "arn:aws:eks:<region-name>:<account-id>:cluster/eks-workshop",
+      "Partition": "aws",
+      "Region": "<region-name>",
+      "Tags": {
+        "aws:cloudformation:stack-name": "eksctl-eks-workshop-cluster",
+        "alpha.eksctl.io/cluster-name": "eks-workshop",
+        "karpenter.sh/discovery": "eks-workshop",
+        "aws:cloudformation:stack-id": "arn:aws:cloudformation:<region-name>:<account-id>:stack/eksctl-eks-workshop-cluster/af5425e0-b757-11ef-896b-12be1755f059",
+        "eksctl.cluster.k8s.io/v1alpha1/cluster-name": "eks-workshop",
+        "alpha.eksctl.io/cluster-oidc-enabled": "true",
+        "aws:cloudformation:logical-id": "ControlPlane",
+        "env": "eks-workshop",
+        "alpha.eksctl.io/eksctl-version": "0.197.0",
+        "created-by": "eks-workshop-v2",
+        "Name": "eksctl-eks-workshop-cluster/ControlPlane"
+      },
+      "Type": "AwsEksCluster"
+    }
+  ],
+  "Sample": false,
+  "SchemaVersion": "2018-10-08",
+  "Severity": {
+    "Label": "MEDIUM",
+    "Normalized": 50,
+    "Product": 5
+  },
+  "SourceUrl": "https://<region-name>.console.aws.amazon.com/guardduty/home?region=<region-name>#/findings?macros=current&fId=f0ca37ab26ae68d5528afbbd62e20d74",
+  "Title": "A container was launched with a sensitive host path mounted inside.",
+  "Types": [
+    "TTPs/Persistence/Persistence:Kubernetes-ContainerWithSensitiveMount"
+  ],
+  "UpdatedAt": "2025-01-16T13:38:34.463Z",
+  "Workflow": {
+    "Status": "NEW"
+  },
+  "WorkflowState": "NEW"
+}
