@@ -15,6 +15,7 @@
 ###############################################################################
 
 import os
+from typing import Any, Dict
 
 import botocore
 from arnparse import arnparse
@@ -33,7 +34,7 @@ logger = get_logger(__name__)
 
 # Get Cluster name
 # cluster_name = os.environ["CLUSTER_NAME"]
-cluster_cache = {}
+cluster_cache: Dict[str, Any] = {}
 
 
 @xray_recorder.capture("Forensic Triaging")
@@ -527,14 +528,14 @@ def set_cluster_access_mode(clustername, eks_client, cluster_admin_role_arn):
 # Add ClusterAdmin Access Entry for the Cluster Admin Role .
 def get_add_access_entry(clustername, eks_client, cluster_admin_role_arn):
     logger.info(
-        f"Validating if access entry already exist for the role on the cluster."
+        "Validating if access entry already exist for the role on the cluster."
     )
     list_access_entries = eks_client.list_access_entries(
         clusterName=clustername,
         associatedPolicyArn="arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy",
     )
     if cluster_admin_role_arn in list_access_entries["accessEntries"]:
-        logger.info(f"Access entry already exist for the role on the cluster.")
+        logger.info("Access entry already exist for the role on the cluster.")
         pass
     else:
         # Adding the Role ARN to the cluster
@@ -665,10 +666,10 @@ def get_affected_pods(
             namespace=affected_resource_namespace
         )
         for each_pod in pod_details_namespace.items:
-            pod_details = api_instance.read_namespaced_pod(
-                namespace=affected_resource_namespace,
-                name=each_pod.metadata.name,
-            )
+            # pod_details = api_instance.read_namespaced_pod(
+            #     namespace=affected_resource_namespace,
+            #     name=each_pod.metadata.name,
+            # )
             if each_pod.spec.service_account == affected_resource:
                 affected_pods.append(each_pod.metadata.name)
     else:
@@ -841,9 +842,9 @@ def is_triage_required(instance_info) -> bool:
         return True
 
 
-def is_triage_required_eks(instance_info) -> bool:
+def is_triage_required_eks(instance_info):
     try:
-        triage_required_dict = {}
+        triage_required_dict: Dict[str, bool] = {}
         for each_instance in instance_info:
             explicit_triage_set = any(
                 element.get("Key") == "IsTriageRequired"

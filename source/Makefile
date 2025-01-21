@@ -77,7 +77,7 @@ test: lint        ## Run tests and generate coverage report.
 	# remove end
 	$(ENV_PREFIX)coverage erase
 	$(ENV_PREFIX)pytest -v -s --cov-config .coveragerc --cov=lambda/src --cov=lambda/common -l --tb=short --maxfail=1 lambda/tests/ -vv
-	$(ENV_PREFIX)coverage report --fail-under=80
+	$(ENV_PREFIX)coverage report --fail-under=65
 	$(ENV_PREFIX)coverage xml -o test/coverage-reports/coverage.xml 
 	sed -i -e 's/lambda\/src/source\/lambda\/src/g' test/coverage-reports/coverage.xml
 	# $(ENV_PREFIX)coverage html

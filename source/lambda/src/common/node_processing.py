@@ -1,5 +1,10 @@
 from aws_xray_sdk.core import xray_recorder
 
+from ..common.log import get_logger
+
+# initialise loggers
+logger = get_logger(__name__)
+
 
 @xray_recorder.capture("normalize_instance_ids")
 def normalize_instance_ids(instance_input):
@@ -29,7 +34,10 @@ def normalize_instance_ids(instance_input):
     # If it's any other type, try to convert to string and return as single-item list
     try:
         return [str(instance_input)]
-    except:
+    except Exception as e:
+        logger.error(
+            f"Error Node processing for instance {instance_input}: {str(e)}"
+        )
         return []
 
 

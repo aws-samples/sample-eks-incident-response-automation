@@ -18,6 +18,7 @@ import datetime
 import json
 import os
 import time
+from typing import Any, Dict
 
 import botocore
 from arnparse import arnparse
@@ -33,12 +34,12 @@ from ..common.exception import (
     MemoryAcquisitionError,
 )
 from ..common.log import get_logger
-from ..data.datatypes import ForensicsProcessingPhase
+from ..data.datatypes import ForensicsProcessingPhase, ResourceType
 from ..data.service import ForensicDataService
 
 # initialise loggers
 logger = get_logger(__name__)
-cluster_cache = {}
+cluster_cache: Dict[str, Any] = {}
 
 
 @xray_recorder.capture("Isolate Instance")
@@ -133,7 +134,7 @@ def handler(event, context):
                 fds.add_forensic_timeline_event(
                     id=forensic_id,
                     name=f"{resource_type} isolation failed",
-                    description=f"Node isolation for AwsEKSCluster",
+                    description="Node isolation for AwsEKSCluster",
                     phase=ForensicsProcessingPhase.ISOLATION_FAILED,
                     component_id="isolateEksCluster",
                     component_type="Lambda",
@@ -204,7 +205,7 @@ def handler(event, context):
 
                 update_profile_for_instance(
                     instance_id,
-                    app_account_id,
+                    cluster_account,
                     forensic_isolation_instance_profile_name,
                     ec2_client,
                     current_account,
@@ -239,7 +240,7 @@ def handler(event, context):
                 fds.add_forensic_timeline_event(
                     id=forensic_id,
                     name=f"{resource_type} isolation failed",
-                    description=f"Node isolation for AwsEKSCluster",
+                    description="Node isolation for AwsEKSCluster",
                     phase=ForensicsProcessingPhase.ISOLATION_FAILED,
                     component_id="isolateEksCluster",
                     component_type="Lambda",
@@ -286,6 +287,15 @@ def handler(event, context):
         )
         instance_vpc = input_body.get("instanceInfo").get("VpcId")
         # output = input_body.copy()
+
+        if (
+            forensic_record.memoryAnalysisStatus
+            == ForensicsProcessingPhase.ISOLATION_FAILED
+        ):
+            logger.warning(
+                f"Previous isolation fail for forensic record {forensic_id}, proceed to error handling"
+            )
+            raise ForensicLambdaExecutionException("Previous isolation failed")
 
         enable_evidence_protection(instance_id, ec2_client)
 
@@ -512,7 +522,7 @@ def create_sts_deny_policy_sa(
             service_account_details.metadata.annotations
         )
         if (
-            service_account_annotations == None
+            service_account_annotations is None
             or "eks.amazonaws.com/role-arn"
             not in service_account_details.metadata.annotations
         ):
@@ -624,7 +634,8 @@ def eks_cordon_node(input_body, eks_client, cluster_admin_role_arn):
 
 def invalid_existing_credential_sessions(iam_client, forensic_record):
     resource_type = forensic_record.resourceType
-    if resource_type == "INSTANCE":
+    logger.info(f"Process resource type: {resource_type}")
+    if resource_type == ResourceType.INSTANCE:
         instance_profile = forensic_record.resourceInfo["IamInstanceProfile"]
         instance_profile_arn = forensic_record.resourceInfo[
             "IamInstanceProfile"

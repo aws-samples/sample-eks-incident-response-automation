@@ -35,7 +35,7 @@ Not currently handling:
 
 * Compromised user scenarios in EKS 
 * Compromised image scenarios in EKS
-* Test Coverage for EKS 
+* Test Coverage for EKS
 
 
 ### EKS/EC2 Forensic Orchestrator Solution Architecture
@@ -83,8 +83,9 @@ _Tools_
     - export AWS_SESSION_TOKEN=<<XXXXXXXXXXXXXXXXX>>
     - export AWS_REGION=<<AWS Region - us-east-1>>
 5. Run the following commands in the same order as below:
-    1. `npm ci`
-    2. `npm run build-lambda`
+    1. `cd source`
+    2. `npm ci`
+    3. `npm run build-lambda`
 6. To build the Forensic Stack to be deployed in the Forensic AWS Account:
 
     `cdk synth -c account=<Forensic AWS Account Number> -c region=<Region> -c sechubaccount=<Security Hub Aggregator Account Number> -c STACK_BUILD_TARGET_ACCT=forensicAccount` build the necessary CDK CFN templates for deploying forensic stack

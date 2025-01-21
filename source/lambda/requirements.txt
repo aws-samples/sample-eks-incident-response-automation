@@ -86,3 +86,4 @@ wrapt==1.16.0
     # via aws-xray-sdk
 kubernetes
 eks_token
+# flake8 "importlib-metadata<5.0"

@@ -10,3 +10,4 @@ aws-xray-sdk==2.14.0
 arnparse==0.0.2
 urllib3==1.26.19
 kubernetes
+# flake8 "importlib-metadata<5.0"

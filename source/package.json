@@ -13,7 +13,7 @@
         "test": "jest test -- -u",
         "cdk": "cdk",
         "synth": "cdk context --clear && cdk synth -q",
-        "build-lambda": "make install",
+        "build-lambda": "make install && make test",
         "all": "npm ci && npm run lint &&  npm run build && npm run test && tsc && npm run synth",
         "deploy": "cdk deploy --all",
         "destroy": "cdk destroy --all",
