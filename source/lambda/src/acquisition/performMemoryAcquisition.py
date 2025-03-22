@@ -90,7 +90,12 @@ def handler(event, context):
         )
 
         # Normalize instance IDs to always work with a list
-        instance_ids = normalize_instance_ids(forensic_record.resourceId)
+        if "clusterInfo" in input_body:
+            instance_ids = normalize_instance_ids(
+                input_body.get("clusterInfo").get("affectedNode")
+            )
+        else:
+            instance_ids = normalize_instance_ids(forensic_record.resourceId)
 
         if not instance_ids:
             raise MemoryAcquisitionError("No valid instance IDs provided")
@@ -118,6 +123,10 @@ def handler(event, context):
         # Normalize instance info to always work with a dictionary
         instances_info = normalize_instance_info(
             input_body.get("instanceInfo")
+        )
+
+        logger.info(
+            f"Instance Info for all the affected instance is {instances_info}"
         )
 
         response = ssm_client.describe_instance_information(
@@ -188,8 +197,6 @@ def handler(event, context):
                 #     if item["InstanceId"] == instance_id:
                 #         is_ssm_installed = True
                 #         output_body["SSM_STATUS"] = "SUCCEEDED"
-
-                logger.info(output_body)
 
                 # if is_ssm_installed:
                 sts = create_aws_client("sts")
@@ -311,11 +318,6 @@ def handler(event, context):
                         }
                     },
                 }
-
-                logger.info(output_body)
-                return create_response(200, output_body)
-                # else:
-                #     raise RuntimeError("SSM Not installed")
             except Exception as e:
                 logger.error(
                     f"Error processing instance {instance_id}: {str(e)}"
@@ -324,6 +326,8 @@ def handler(event, context):
                     "SSM_STATUS": "FAILED",
                     "error": str(e),
                 }
+        logger.info(output_body)
+        return create_response(200, output_body)
     except Exception as e:
         exception_type = e.__class__.__name__
         exception_message = str(e)

@@ -153,7 +153,10 @@ export class ForensicsInvestigationConstruct extends Construct {
             new PolicyStatement({
                 effect: Effect.ALLOW,
                 actions: ['ec2:CreateVolume'],
-                resources: [`arn:aws:ec2:${region}:${account}:volume/*`],
+                resources: [
+                    `arn:aws:ec2:${region}:${account}:volume/*`,
+                    `arn:aws:ec2:${region}::snapshot/*`
+                ],
             }),
             new PolicyStatement({
                 effect: Effect.ALLOW,

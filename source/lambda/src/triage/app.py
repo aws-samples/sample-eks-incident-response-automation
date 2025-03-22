@@ -15,6 +15,7 @@
 ###############################################################################
 
 import os
+import time
 from typing import Any, Dict
 
 import botocore
@@ -553,6 +554,32 @@ def get_add_access_entry(clustername, eks_client, cluster_admin_role_arn):
                 "type": "cluster",
             },
         )
+        list_access_entries = eks_client.list_access_entries(
+            clusterName=clustername,
+            associatedPolicyArn="arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy",
+        )
+        # Check if the cluster admin role is added to entry if not sleep for 100
+        while (
+            cluster_admin_role_arn not in list_access_entries["accessEntries"]
+        ):
+            logger.info(
+                "Access entry is not added to the cluster. Sleeping for 100 seconds."
+            )
+            time.sleep(100)
+            list_access_entries = eks_client.list_access_entries(
+                clusterName=clustername,
+                associatedPolicyArn="arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy",
+            )
+            if cluster_admin_role_arn in list_access_entries["accessEntries"]:
+                logger.info(
+                    "Access entry is added to the cluster. Continuing the execution."
+                )
+                break
+            else:
+                logger.info(
+                    "Access entry is not added to the cluster. Sleeping for 100 seconds."
+                )
+                continue
 
 
 def get_cluster_info(cluster_name, eks_client):

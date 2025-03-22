@@ -67,7 +67,7 @@ def handler(event, context):
                 app_account_role=app_account_role,
             )
             if "clusterInfo" in input_body:
-                for instance_id in input_body:
+                for instance_id in input_body.get("clusterInfo").get("affectedNode"):
                     if (
                         isinstance(input_body[instance_id], dict)
                         and "snapshotIds" in input_body[instance_id]
@@ -115,7 +115,7 @@ def handler(event, context):
                                     "solutionAccount": current_account,
                                 },
                             )
-
+                    output_body[instance_id]["isSnapshotShared"] = True
             else:
 
                 snapshot_ids = input_body.get("snapshotIds")

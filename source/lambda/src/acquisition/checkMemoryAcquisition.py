@@ -97,7 +97,6 @@ def handler(event, context):
                 CommandId=command_id,
                 InstanceId=instance_id,
             )
-            logger.info(output_body)
             if ssm_response.get("StatusDetails", None) in [
                 "Pending",
                 "Delayed",

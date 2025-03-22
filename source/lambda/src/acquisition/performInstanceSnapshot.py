@@ -122,8 +122,9 @@ def handler(event, context):
         )
 
         if "clusterInfo" in input_body:
-            instance_id_list = forensic_record.resourceId
+            instance_id_list = input_body.get("clusterInfo").get("affectedNode")
             output_body["instanceId"] = instance_id_list
+            source_snapshot_ids = []
             for each_instance_id in instance_id_list:
                 logger.info(
                     "Taking snapshot for EBS volumes {0}".format(
@@ -144,7 +145,9 @@ def handler(event, context):
                     "snapshotArtifactMap": snapshot_artifact_map,
                     "isSnapshotShared": False,
                 }
+                source_snapshot_ids.extend(snapshot_ids)
                 output_body["isSnapshotShared"] = False
+                output_body["snapshotIds"] = source_snapshot_ids
         else:
             instance_id = forensic_record.resourceId
             output_body["instanceId"] = instance_id

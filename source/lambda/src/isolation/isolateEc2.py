@@ -553,7 +553,7 @@ def eks_pod_containtment(
     affected_cluster = input_body["clusterInfo"]["clusterName"]
     affected_pod_list = input_body["clusterInfo"]["affectedPodResource"]
     affected_pod_namespace = input_body["clusterInfo"][
-        "affectedPodResourceNamespace"
+        "affectedResourceNamespace"
     ]
     get_kubeconfig = get_eks_credentials(
         affected_cluster, eks_client, cluster_admin_role_arn
@@ -588,7 +588,7 @@ def eks_label_pod(input_body, eks_client, cluster_admin_role_arn):
     affected_cluster = input_body["clusterInfo"]["clusterName"]
     affected_pod_list = input_body["clusterInfo"]["affectedPodResource"]
     affected_pod_namespace = input_body["clusterInfo"][
-        "affectedPodResourceNamespace"
+        "affectedResourceNamespace"
     ]
     get_kubeconfig = get_eks_credentials(
         affected_cluster, eks_client, cluster_admin_role_arn
@@ -610,7 +610,8 @@ def eks_label_pod(input_body, eks_client, cluster_admin_role_arn):
 def eks_cordon_node(input_body, eks_client, cluster_admin_role_arn):
     affected_cluster = input_body["clusterInfo"]["clusterName"]
     affected_pod_list = input_body["clusterInfo"]["affectedPodResource"]
-    namespace = input_body["clusterInfo"]["affectedPodResourceNamespace"]
+    namespace = input_body["clusterInfo"]["affectedResourceNamespace"]
+    affected_node = input_body["clusterInfo"]["affectedNode"]
     get_kubeconfig = get_eks_credentials(
         affected_cluster, eks_client, cluster_admin_role_arn
     )
@@ -622,14 +623,18 @@ def eks_cordon_node(input_body, eks_client, cluster_admin_role_arn):
         )
         node_name = pod_info.spec.node_name
         node_info = api_instance.read_node(name=node_name)
-        if node_info.spec.unschedulable:
-            logger.info(f"Node {node_name} is already cordoned. Skipping.")
-            continue
-        else:
-            logger.info(f"Cordoning the node {node_name}")
-            body = {"spec": {"unschedulable": True}}
-            api_instance.patch_node(node_name, body)
-            time.sleep(10)
+        provider_id = node_info.spec.provider_id
+        instance_id = provider_id.split('/')[-1]
+        for each_affected_instance in affected_node:
+            if instance_id == each_affected_instance:
+                if node_info.spec.unschedulable:
+                    logger.info(f"Node {node_name} is already cordoned. Skipping.")
+                    continue
+                else:
+                    logger.info(f"Cordoning the node {node_name}")
+                    body = {"spec": {"unschedulable": True}}
+                    api_instance.patch_node(node_name, body)
+                    time.sleep(10)
 
 
 def invalid_existing_credential_sessions(iam_client, forensic_record):

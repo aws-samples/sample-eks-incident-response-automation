@@ -15,6 +15,7 @@
 ###############################################################################
 
 import os
+from itertools import chain
 
 from aws_xray_sdk.core import xray_recorder
 
@@ -89,8 +90,9 @@ def handler(event, context):
         )
 
         if "clusterInfo" in input_body:
-            instance_id_list = forensic_record.resourceId
+            instance_id_list = input_body.get("clusterInfo").get("affectedNode")
             output_body["instanceId"] = instance_id_list
+            copy_snapshot_ids = []
             for each_instance_id in instance_id_list:
                 if (
                     each_instance_id in input_body
@@ -101,7 +103,7 @@ def handler(event, context):
                             each_instance_id
                         )
                     )
-                    copy_snapshot_ids = []
+                    copy_instance_snapshot_ids = []
                     for snapshot in input_body[each_instance_id][
                         "snapshotIds"
                     ]:
@@ -123,7 +125,7 @@ def handler(event, context):
                                 }
                             ],
                         )
-                        copy_snapshot_ids.append(
+                        copy_instance_snapshot_ids.append(
                             snapshot_details["SnapshotId"]
                         )
 
@@ -131,8 +133,9 @@ def handler(event, context):
                         output_body[each_instance_id] = {}
                     output_body[each_instance_id][
                         "copySnapshotIds"
-                    ] = copy_snapshot_ids
+                    ] = copy_instance_snapshot_ids
                     output_body[each_instance_id]["isCopyComplete"] = False
+                copy_snapshot_ids.extend(copy_instance_snapshot_ids)
         else:
             instance_id = forensic_record.resourceId
             output_body["instanceId"] = instance_id
