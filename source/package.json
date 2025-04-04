@@ -1,0 +1,62 @@
+{
+    "name": "forensic-cdk-solution",
+    "version": "1.2.3",
+    "bin": {
+        "cdk-solution": "bin/forensic-cdk-solution.js"
+    },
+    "scripts": {
+        "lint": "eslint --fix --ext .ts . && prettier --write './**/*.{ts,js,json}' ",
+        "cleanup": "tsc --build ./ --clean && rm -rf node_modules && rm -f package-lock.json",
+        "cleanup:tsc": "tsc --build ./ --clean",
+        "build": "npm run build-lambda",
+        "watch": "tsc -w",
+        "test": "jest test -- -u",
+        "cdk": "cdk",
+        "synth": "cdk context --clear && cdk synth -q",
+        "build-lambda": "make install && make test",
+        "all": "npm ci && npm run lint &&  npm run build && npm run test && tsc && npm run synth",
+        "deploy": "cdk deploy --all",
+        "destroy": "cdk destroy --all",
+        "release:patch": "standard-version --release-as patch",
+        "release:minor": "standard-version --release-as minor",
+        "release:major": "standard-version --release-as major",
+        "release": "standard-version"
+    },
+    "devDependencies": {
+        "@types/jest": "29.5.1",
+        "@types/uuid": "^9.0.1",
+        "rimraf": "5.0.0"
+    },
+    "peerDependencies": {
+        "constructs": "^10.0.0"
+    },
+    "dependencies": {
+        "@aws-cdk/assert": "2.46.0",
+        "@types/node": "20.1.1",
+        "@typescript-eslint/eslint-plugin": "5.30.5",
+        "@typescript-eslint/parser": "5.30.5",
+        "aws-cdk": "^2.138.0",
+        "aws-cdk-lib": "2.85.0",
+        "aws-sdk": "^2.1374.0",
+        "cdk-nag": "^2.26.19",
+        "constructs": "^10.0.0",
+        "eslint": "8.19.0",
+        "eslint-config-prettier": "^8.8.0",
+        "eslint-config-typescript": "^3.0.0",
+        "eslint-plugin-header": "^3.1.1",
+        "eslint-plugin-prettier": "4.2.1",
+        "fs": "^0.0.1-security",
+        "jest": "29.5.0",
+        "jest-junit": "^16.0.0",
+        "prettier": "2.7.1",
+        "source-map-support": "0.5.21",
+        "ts-jest": "29.1.0",
+        "ts-node": "10.8.2",
+        "typescript": "5.0.4",
+        "uuid": "^9.0.0"
+    },
+    "overrides": {
+        "semver": "^7.5.3",
+        "optionator": "^0.9.3"
+    }
+}

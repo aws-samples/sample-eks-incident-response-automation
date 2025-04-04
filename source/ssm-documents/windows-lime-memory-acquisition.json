@@ -1,0 +1,68 @@
+{
+    "schemaVersion": "2.2",
+    "description": "Run a script on Windows instance to prepare for Memory acquisition.",
+    "parameters": {
+        "s3ArtifactLocation": {
+            "type": "String",
+            "description": "(Required) Artifact upload location"
+        },
+        "AccessKeyId": {
+            "type": "String",
+            "description": "(Required) AccesskeyID to store evidence details in S3."
+        },
+        "SecretAccessKey": {
+            "type": "String",
+            "description": "(Required) SecretAccessKey to store evidence details in S3"
+        },
+        "SessionToken": {
+            "type": "String",
+            "description": "(Required) SessionToken to store evidence details in S3."
+        },
+        "Region": {
+            "type": "String",
+            "description": "(Required) Region details.",
+            "default": "ap-southeast-2"
+        }
+    },
+    
+    "mainSteps": [
+        {
+            "action": "aws:runPowerShellScript",
+            "name": "runCommands",
+            "precondition": {
+                "StringEquals": ["platformType", "Windows"]
+            },
+            "inputs": {
+                "timeoutSeconds": "1000",
+                "runCommand": [
+                    "cd C:\\",
+                    "mkdir forensic-analysis",
+                    "cd forensic-analysis",
+                    "$env:AWS_ACCESS_KEY_ID=\"{{ AccessKeyId }}\"",
+                    "$env:AWS_SECRET_ACCESS_KEY=\"{{ SecretAccessKey }}\"",
+                    "$env:AWS_SESSION_TOKEN=\" {{ SessionToken }}\"",
+                    "$env:AWS_DEFAULT_REGION={{ Region }}",
+                    "echo 'checking crential'",
+                    "echo $(Get-Item -Path Env:\\AWS_ACCESS_KEY_ID)",
+                    "echo $(Get-Item -Path Env:\\AWS_SECRET_ACCESS_KEY)",
+                    "echo 'eching id passed in'",
+                    "echo {{ AWS_ACCESS_KEY_ID }}",
+                    
+                    "Start-Process -FilePath \"msiexec.exe\" -ArgumentList \"/i https://awscli.amazonaws.com/AWSCLIV2.msi /qn\" -Wait",
+                    "$env:Path=[System.Environment]::GetEnvironmentVariable(\"Path\",\"Machine\")",
+                    "echo 'aws cli installed'",
+                    "echo $(aws sts get-caller-identity)",
+                    "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12",
+                    "Invoke-WebRequest -Uri  https://github.com/Velocidex/WinPmem/releases/download/v4.0.rc1/winpmem_mini_x64_rc2.exe -OutFile winp.exe",
+                    "echo 'winpmem installed and memory dumped'",
+                    ".\\winp.exe output.raw",
+                    "CertUtil -hashfile .\\output.raw SHA256 > raw_sha256.txt",
+                    "aws s3 cp output.raw {{s3ArtifactLocation}}/",
+                    "aws s3 cp raw_sha256.txt {{s3ArtifactLocation}}/",
+                    "echo 's3 cp complete'",
+                    "exit 0;"
+                ]
+            }
+        }
+    ]
+}

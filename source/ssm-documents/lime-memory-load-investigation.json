@@ -1,0 +1,147 @@
+{
+    "schemaVersion": "2.2",
+    "description": "Run a script on Linux instance to perform memory load investigation",
+    "parameters": {
+        "s3Location": {
+            "type": "String",
+            "description": "S3 location to load the results into bucket",
+            "default": "aws s3 cp - s3://{3}/{1}/{2}/{0}/memory/{0}.raw"
+        },
+        "s3DownloadCommands": {
+            "type": "String",
+            "description": "(Required)command to down from S3 bucket.",
+            "default": "aws s3 cp - s3://{3}/{1}/{2}/{0}/memory/{0}.raw"
+        },
+        "AccessKeyId": {
+            "type": "String",
+            "description": "(Required) AccesskeyID to store evidence details in S3.",
+            "default": "Access key ID"
+        },
+        "SecretAccessKey": {
+            "type": "String",
+            "description": "(Required) SecretAccessKey to store evidence details in S3",
+            "default": "secret access key"
+        },
+        "SessionToken": {
+            "type": "String",
+            "description": "(Required) SessionToken to store evidence details in S3.",
+            "default": "session Token"
+        },
+        "forensicID": {
+            "type": "String",
+            "description": "(Required) forensicID of memory acquisition",
+            "default": "session Token"
+        },
+        "s3Bucket": {
+            "type": "String",
+            "description": "(Required) S3 bucket location of captured memory",
+            "default": "S3 Bucket Name"
+        },
+        "s3MemoryCaptureKey": {
+            "type": "String",
+            "description": "Prefix of Memory capture",
+            "default": "/InstanceID/forensicID"
+        },
+        "s3ProfileLocation": {
+            "type": "String",
+            "description": "Prefix of Volatility profile",
+            "default": "volatility3/symbols"
+        },
+        "s3ProfileBucket": {
+            "type": "String",
+            "description": "OS Profile for bucket",
+            "default": "S3 Bucket Name"
+        },
+        "Region": {
+            "type": "String",
+            "description": "(Required) Region details.",
+            "default": "ap-southeast-2"
+        }
+    },
+    "mainSteps": [
+        {
+            "action": "aws:runShellScript",
+            "name": "runCommands",
+            "precondition": {
+                "StringEquals": ["platformType", "Linux"]
+            },
+            "inputs": {
+                "timeoutSeconds": "4000",
+                "runCommand": [
+                    "#!/bin/bash",
+                    "cd /tmp",
+                    "mkdir forensic-analysis",
+                    "cd forensic-analysis",
+                    "instance=$(echo {{s3MemoryCaptureKey}} | sed -n 's/.*\\(i-[a-z0-9]*\\).*/\\1/p')",
+                    "mkdir -p /tmp/forensic-analysis/data/{{forensicID}}_evidence_dir/$instance",
+                    "mkdir -p /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance",
+                    "cd data/{{forensicID}}_evidence_dir/$instance",
+                    "export AWS_ACCESS_KEY_ID={{AccessKeyId}}",
+                    "export AWS_SECRET_ACCESS_KEY={{SecretAccessKey}}",
+                    "export AWS_SESSION_TOKEN={{SessionToken}}",
+                    "export AWS_DEFAULT_REGION={{Region}}",
+                    "sudo yum update -y",
+                    "sudo yum groupinstall 'Development Tools' -y",
+                    "sudo yum install -y openssl-devel libffi-devel xz-devel zlib-devel bzip2-devel readline-devel sqlite-devel tk-devel ncurses-devel gdbm-devel uuid-devel",
+                    "PYTHON_VERSION=$(python3 --version)",
+                    "if [[ ! $PYTHON_VERSION == *'3.9'* ]]; then",
+                    "   echo 'Error: Python 3.9 is required but found $PYTHON_VERSION'",
+                    "   cd /opt",
+                    "   sudo wget https://www.python.org/ftp/python/3.9.16/Python-3.9.16.tgz",
+                    "   sudo tar xzf Python-3.9.16.tgz",
+                    "   cd Python-3.9.16",
+                    "   sudo ./configure --enable-optimizations",
+                    "   sudo make altinstall",
+                    "   sudo ln -sf /usr/local/bin/python3.9 /usr/bin/python3",
+                    "   sudo ln -sf /usr/local/bin/pip3.9 /usr/bin/pip3",
+                    "   fi",
+                    "cd /tmp/forensic-analysis/data/{{forensicID}}_evidence_dir/$instance",
+                    "pip3 install --upgrade awscli",
+                    "aws configure set default.s3.max_concurrent_requests 100",
+                    "{{s3DownloadCommands}}",
+                    "ls -lar >&2",
+                    "aws s3api head-object --bucket {{s3Bucket}} --key {{s3MemoryCaptureKey}}/linux_memcapture.lime.gz > s3HeadResponse.json",
+                    "gzip -d linux_memcapture.lime.gz",
+                    "ls -lar >&2",
+                    "cat s3HeadResponse.json | jq '.Metadata' > s3meta.json",
+                    "kernel_name=$(jq -r '.[\"kernel-name\"]' s3meta.json)",
+                    "kernel_version=$(jq -r '.[\"kernel-release\"]' s3meta.json)",
+                    "ls",
+                    "cd /tmp",
+                    "mkdir forensic-tools",
+                    "cd forensic-tools",
+                    "ls",
+                    "aws s3 cp s3://{{s3Bucket}}/tools/volatility/volatility3.zip .",
+                    "if [ '$(ls -A $DIR)' ]; then",
+                    "    unzip volatility3.zip",
+                    "    echo successfully downloaded volatility3 from S3",
+                    "else",
+                    "    git clone https://github.com/volatilityfoundation/volatility3.git",
+                    "    echo S3 download not found so downloading from internet",
+                    "fi",
+                    "aws s3 cp s3://{{s3ProfileBucket}}/{{s3ProfileLocation}}/$kernel_name-$kernel_version.json ./volatility3/volatility3/symbols/",
+                    "if [ ! -f ./volatility3/volatility3/symbols/$kernel_name-$kernel_version.json ]; then",
+                    "    echo kernel symbol does not exist ",
+                    "    exit 255;",
+                    "fi",
+                    "python3 --version",
+                    "python3 ./volatility3/vol.py --file=/tmp/forensic-analysis/data/{{forensicID}}_evidence_dir/$instance/linux_memcapture.lime -s  volatility3/volatility3/symbols/$kernel_name-$kernel_version.json linux.bash > /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance/vol3-output-linux_bash.txt",
+                    "python3 ./volatility3/vol.py --file=/tmp/forensic-analysis/data/{{forensicID}}_evidence_dir/$instance/linux_memcapture.lime -s volatility3/volatility3/symbols/$kernel_name-$kernel_version.json linux.psaux > /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance/vol3-output-linux_psaux.txt",
+                    "python3 ./volatility3/vol.py --file=/tmp/forensic-analysis/data/{{forensicID}}_evidence_dir/$instance/linux_memcapture.lime -s volatility3/volatility3/symbols/$kernel_name-$kernel_version.json linux.pslist > /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance/vol3-output-linux_pslist.txt",
+                    "python3 ./volatility3/vol.py --file=/tmp/forensic-analysis/data/{{forensicID}}_evidence_dir/$instance/linux_memcapture.lime -s volatility3/volatility3/symbols/$kernel_name-$kernel_version.json linux.psscan > /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance/vol3-output-linux_psscan.txt",
+                    "cd /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance",
+                    "for f in $(ls vol3-output*.txt); do sha256sum \"$f\" > \"$(basename $f .txt)_sha256.txt\"; done",
+                    "cd /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance",
+                    "sudo yum install docker -y",
+                    "sudo systemctl start docker",
+                    "sudo docker run -v /tmp/:/tmp log2timeline/plaso log2timeline -u --status_view none --partitions all --hashers md5 --hasher_file_size_limit 1073741824 --parser linux --storage-file /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance/timeline.plaso /tmp/forensic-analysis/data/{{forensicID}}_evidence_dir/$instance/linux_memcapture.lime",
+                    "sudo docker run -v /tmp/:/tmp log2timeline/plaso psort -o l2tcsv -w /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance/webhist.csv /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance/timeline.plaso",
+                    "aws s3 cp /tmp/forensic-analysis/data/{{forensicID}}_working_dir/$instance {{s3Location}}  --recursive",
+                    "echo s3 cp complete",
+                    "ls -ltr",
+                    "exit 0;"
+                ]
+            }
+        }
+    ]
+}
