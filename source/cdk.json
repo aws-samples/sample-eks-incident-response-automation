@@ -10,7 +10,7 @@
         "forensicBucketRetentionDays": 30,
         "forensicBucketAccessIamRoleNames": [],
         "ssmDocumentsDir": "./ssm-documents",
-        "vol2ProfilesBucket": "",
+        "vol3SymbolsBucket": "",
         "ssmExecutionTimeout": "1800",
         "diskSize": "512",
         "forensicImageName": "sansift",

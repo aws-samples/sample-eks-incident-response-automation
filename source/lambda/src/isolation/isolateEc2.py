@@ -624,11 +624,13 @@ def eks_cordon_node(input_body, eks_client, cluster_admin_role_arn):
         node_name = pod_info.spec.node_name
         node_info = api_instance.read_node(name=node_name)
         provider_id = node_info.spec.provider_id
-        instance_id = provider_id.split('/')[-1]
+        instance_id = provider_id.split("/")[-1]
         for each_affected_instance in affected_node:
             if instance_id == each_affected_instance:
                 if node_info.spec.unschedulable:
-                    logger.info(f"Node {node_name} is already cordoned. Skipping.")
+                    logger.info(
+                        f"Node {node_name} is already cordoned. Skipping."
+                    )
                     continue
                 else:
                     logger.info(f"Cordoning the node {node_name}")

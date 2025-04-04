@@ -217,13 +217,14 @@ def lambda_handler(event, context):
                     ]["InstanceId"]
                 )
             else:
-                affected_node_list = get_affected_node_from_pod(
+                affected_node_complete_list = get_affected_node_from_pod(
                     cluster_name,
                     affected_pod_list_resource,
                     affected_resource_namespace,
                     eks_client,
                     app_account_role_arn,
                 )
+                affected_node_list = list(set(affected_node_complete_list))
             related_findings = get_related_findings(event)
             logger.info(related_findings)
             forensic_record = fds.create_forensic_record(

@@ -122,7 +122,9 @@ def handler(event, context):
         )
 
         if "clusterInfo" in input_body:
-            instance_id_list = input_body.get("clusterInfo").get("affectedNode")
+            instance_id_list = input_body.get("clusterInfo").get(
+                "affectedNode"
+            )
             output_body["instanceId"] = instance_id_list
             source_snapshot_ids = []
             for each_instance_id in instance_id_list:

@@ -15,7 +15,6 @@
 ###############################################################################
 
 import os
-from itertools import chain
 
 from aws_xray_sdk.core import xray_recorder
 
@@ -90,7 +89,9 @@ def handler(event, context):
         )
 
         if "clusterInfo" in input_body:
-            instance_id_list = input_body.get("clusterInfo").get("affectedNode")
+            instance_id_list = input_body.get("clusterInfo").get(
+                "affectedNode"
+            )
             output_body["instanceId"] = instance_id_list
             copy_snapshot_ids = []
             for each_instance_id in instance_id_list:
