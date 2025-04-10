@@ -73,6 +73,7 @@
                     "installLimeYum() {",
                     "    sudo yum check-update -y",
                     "    sudo yum install git -y",
+                    "    sudo yum groupinstall -y Development Tools",
                     "    sudo yum install kernel-devel-$1 -y",
                     "    cd /tmp && sudo rm -rf LiME",
                     "    git clone https://github.com/504ensicsLabs/LiME",
@@ -123,7 +124,10 @@
                     "  fi",
                     "fi",
                     "    echo $lime_path",
-                    "sudo insmod $lime_path \"path=tcp:4444 format=lime localhostonly=1\" &",
+                    "DUMP_DIR=\"/memory_analysis/memory_dump\"",
+                    "sudo mkdir -p $DUMP_DIR",
+                    "DUMP_FILE=\"$DUMP_DIR/memory_$(date +%Y%m%d_%H%M%S).lime\"",
+                    "sudo insmod $lime_path \"path=$DUMP_FILE format=lime\" &",
                     "sleep 120",
                     "if [[ `lsmod|grep lime|wc -l` -gt 0 ]] ; then ",
                     "    echo \"LiME has been loaded\" >&2",
@@ -137,7 +141,7 @@
                     "ACL_FLAG=\"--acl bucket-owner-full-control\"",
                     "METADATA_FLAG=\"--metadata uncompressed-size=$MEMSIZE,kernel-name=$kernel_name,kernel-release=$kernel_release\"",
                     "EXPECTED_SIZE_FLAG=\"--expected-size $S3_EXPECTED_SIZE\"",
-                    "cat < /dev/tcp/127.0.0.1/4444 | tee >(gzip | s3cp \".lime.gz\" \"$EXPECTED_SIZE_FLAG\" \"$METADATA_FLAG\" \"$ACL_FLAG\") | sha256sum | s3cp \"_sha256.txt\" \"$ACL_FLAG\"",
+                    "cat $DUMP_FILE | tee >(gzip | s3cp \".lime.gz\" \"$EXPECTED_SIZE_FLAG\" \"$METADATA_FLAG\" \"$ACL_FLAG\") | sha256sum | s3cp \"_sha256.txt\" \"$ACL_FLAG\"",
                     "sudo rmmod lime.ko",
                     "exit 0;"
                 ]
