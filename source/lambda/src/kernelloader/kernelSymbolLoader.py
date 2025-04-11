@@ -54,9 +54,12 @@ def handler(event, context):
         ami_id = event["amiId"]
 
         distribution = event["distribution"]
-        username = event["username"]
-        password = event["password"]
-        supported_dis = ["RHEL7", "RHEL8", "RHEL9"]
+        if distribution != "AMAZON_LINUX_2":
+            if "username" not in event or "password" not in event:
+                 raise ValueError("Username and password are required for non-AMAZON_LINUX_2 distributions")
+            username = event["username"]
+            password = event["password"]
+        supported_dis = ["RHEL7", "RHEL8", "RHEL9", "AMAZON_LINUX_2"]
         if distribution not in supported_dis:
             raise ValueError(
                 "Invalid distribution value, supports"
@@ -165,18 +168,27 @@ def handler(event, context):
                 DurationSeconds=3600,
                 Policy=json.dumps(session_policy),
             )["Credentials"]
-
-            params = {
-                "AccessKeyId": [tokens["AccessKeyId"]],
-                "SecretAccessKey": [tokens["SecretAccessKey"]],
-                "SessionToken": [tokens["SessionToken"]],
-                "Region": [region],
-                "s3bucket": [s3bucket_name],
-                "ExecutionTimeout": ["3600"],
-                #  TODO move to config and scret mgr
-                "SubscriptionManagerUsername": [username],
-                "SubscriptionManagerPassword": [password],
-            }
+            if distribution == "AMAZON_LINUX_2":
+                params = {
+                    "AccessKeyId": [tokens["AccessKeyId"]],
+                    "SecretAccessKey": [tokens["SecretAccessKey"]],
+                    "SessionToken": [tokens["SessionToken"]],
+                    "Region": [region],
+                    "s3bucket": [s3bucket_name],
+                    "ExecutionTimeout": ["3600"]
+                }
+            else:
+                params = {
+                    "AccessKeyId": [tokens["AccessKeyId"]],
+                    "SecretAccessKey": [tokens["SecretAccessKey"]],
+                    "SessionToken": [tokens["SessionToken"]],
+                    "Region": [region],
+                    "s3bucket": [s3bucket_name],
+                    "ExecutionTimeout": ["3600"],
+                    #  TODO move to config and scret mgr
+                    "SubscriptionManagerUsername": [username],
+                    "SubscriptionManagerPassword": [password],
+                }
             document_name = os.environ[distribution + "_VOLATILITY_SYMBOL"]
             response = ssm_client_current_account.send_command(
                 InstanceIds=[instance_id],
