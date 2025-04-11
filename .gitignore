@@ -107,3 +107,5 @@ env.bak/
 venv.bak/
 .build/
 .idea/
+
+.github/

@@ -64,7 +64,7 @@ _Tools_
     _Note:_ We are working on a blog detailing how to use SSM Distributor to deploy agents across a multi account environment.
 -   Supported EC2 instance AMIs
     -   _Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type_ - ami-0a4e637babb7b0a86 (64-bit x86) / ami-0bc96915949503483 (64-bit Arm)
--   Python version 3.8 or above
+-   Python version 3.9 or above
 
 ---
 
@@ -321,7 +321,7 @@ This script is called from the solution build scripts to ensure that specified t
 
 ---
 
-## Build RHEL kernel symbol for memory analytics support of Red Hat Enterprise Linux 8
+## Build kernel symbol for memory analytics support of Red Hat Enterprise Linux 8 and Amazon Linux 2
 1. after deploy the solution, go to the solution aws account
 2. goto aws console `Step Functions` find stepfunction `Forensic-Profile-Function`
 3. trigger the build by adding input as follow
@@ -332,6 +332,14 @@ This script is called from the solution build scripts to ensure that specified t
 }
 ```
 where ami-0b6c020bf93af9ce1 is the base image AMI for RHEL8, you need a RedHat subscription to do that. see more on https://www.redhat.com/en/store/linux-platforms
+
+```
+{
+  "amiId": "<Amazon linux AMI Id>",
+  "distribution": "AMAZON_LINUX_2"
+}
+```
+
 4. the stepfunction will take care of the symbol building process, once it's done the forensic solution will be able to support RHEL8
 
 
