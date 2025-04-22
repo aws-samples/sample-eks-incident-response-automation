@@ -595,7 +595,7 @@ export class ForensicsInvestigationConstruct extends Construct {
                 handler: 'src.kernelInstance.terminator.handler',
                 applicationName: 'forensicStopBuildingStateLambda',
 
-                functionName: 'Fo-forensicStopeBuildingSateLambda',
+                functionName: 'Fo-forensicStopBuildingSateLambda',
                 environment: {
                     ...props.environment,
                     INSTANCE_TABLE_NAME: props.instanceTable.tableName,

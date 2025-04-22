@@ -149,8 +149,8 @@ def handler(event, context):
                         },
                     )
 
-            output_body["appAccount"] = app_account_id
-            output_body["isSnapshotShared"] = True
+        output_body["appAccount"] = app_account_id
+        output_body["isSnapshotShared"] = True
 
     except Exception as e:
         logger.error(e)

@@ -1,6 +1,13 @@
 # Automated Forensics Orchestrator for Amazon EKS
 
-This solution extends the existing [EC2 forensic orchestrator](https://docs.aws.amazon.com/solutions/latest/automated-forensics-orchestrator-for-amazon-ec2/welcome.html) to support both EC2 and EKS cluster investigations. The enhanced version handles multiple instance scenarios and different EKS compromise scenarios including:
+This solution builds upon the [AWS Automated Forensics Orchestrator for Amazon EC2](https://docs.aws.amazon.com/solutions/latest/automated-forensics-orchestrator-for-amazon-ec2/welcome.html) by extending its capabilities to support Amazon EKS cluster investigations. The enhanced solution:
+
+* Maintains all existing EC2 forensic capabilities
+* Adds specialized EKS-specific investigation workflows
+* Provides a unified forensic platform for both compute services
+* Leverages the same underlying architecture with EKS-specific extensions
+
+The explanation of the code functionality can be found as part of the [How to automate incident response for Amazon EKS](link once published) blog. The enhanced version handles multiple instance scenarios and different EKS compromise scenarios including:
 
 * Pod compromises
 * Node compromises
@@ -65,6 +72,8 @@ _Tools_
 -   Supported EC2 instance AMIs
     -   _Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type_ - ami-0a4e637babb7b0a86 (64-bit x86) / ami-0bc96915949503483 (64-bit Arm)
 -   Python version 3.9 or above
+-   [Lime](https://github.com/504ensicsLabs/LiME) for memory capture 
+-   [Volatility3](https://github.com/volatilityfoundation/volatility3) for memory analysis 
 
 ---
 
@@ -73,7 +82,7 @@ _Tools_
 ### Forensic account deployment
 
 1. Clone the solution source code from its GitHub repository.
-   `git clone <Repository>`
+   `git clone https://github.com/aws-samples/sample-eks-incident-response-automation`
 2. Open the terminal and navigate to the folder created in step 1, and then navigate to the source folder
 3. Configure your application accounts monitored to establish trust relationship in `cdk.json`
    `"applicationAccounts": ["<<Application account1>>", "<<Application account2>>"],`
@@ -121,19 +130,19 @@ _Note_: If you are reusing the above git clone, delete the `cdk.out` folder.
     2. `npm run build`
 5. To build the Forensic Stack to be deployed in the SecurityHub Aggregator account:
 
-    `cdk synth -c sechubaccount=<SecHub Account Number> -c forensicAccount=<ForensicAccount> -c forensicRegion=us-east-1 -c sechubregion=us-east-1 -c STACK_BUILD_TARGET_ACCT=securityHubAccount`
+    `cdk synth -c secHubAccount=<SecHub Account Number> -c forensicAccount=<ForensicAccount> -c forensicRegion=us-east-1 -c sechubregion=us-east-1 -c STACK_BUILD_TARGET_ACCT=securityHubAccount`
 
     Example:
 
-    `cdk synth -c sechubaccount=0987654321 -c forensicAccount=1234567890 -c forensicRegion=us-east-1 -c sechubregion=us-east-1 -c STACK_BUILD_TARGET_ACCT=securityHubAccount`
+    `cdk synth -c secHubAccount=0987654321 -c forensicAccount=1234567890 -c forensicRegion=us-east-1 -c sechubregion=us-east-1 -c STACK_BUILD_TARGET_ACCT=securityHubAccount`
 
 6. To deploy the Forensic Stack in the SecurityHub Aggregator account:
 
-    `cdk deploy --all -c sechubaccount=0987654321 -c account=<Security Hub AWS AccountNumber> -c region=us-east-1 --require-approval=never -c forensicAccount=<Forensic AWS AccountNumber> -c STACK_BUILD_TARGET_ACCT=securityHubAccount -c sechubregion=us-east-1` Deploy the necessary CDK CFN templates for deploying SecurityHub stack
+    `cdk deploy --all -c secHubAccount=0987654321 -c account=<Security Hub AWS AccountNumber> -c region=us-east-1 --require-approval=never -c forensicAccount=<Forensic AWS AccountNumber> -c STACK_BUILD_TARGET_ACCT=securityHubAccount -c sechubregion=us-east-1` Deploy the necessary CDK CFN templates for deploying SecurityHub stack
 
     Example:
 
-    `cdk deploy --all -c sechubaccount=0987654321 -c account=0987654321 -c region=us-east-1 --require-approval=never -c forensicAccount=1234567890 -c STACK_BUILD_TARGET_ACCT=securityHubAccount -c sechubregion=us-east-1` Deploy the necessary CDK CFN templates for deploying SecurityHub stack
+    `cdk deploy --all -c secHubAccount=0987654321 -c account=0987654321 -c region=us-east-1 --require-approval=never -c forensicAccount=1234567890 -c STACK_BUILD_TARGET_ACCT=securityHubAccount -c sechubregion=us-east-1` Deploy the necessary CDK CFN templates for deploying SecurityHub stack
 
 ### Application account deployment
 
@@ -343,28 +352,72 @@ where ami-0b6c020bf93af9ce1 is the base image AMI for RHEL8, you need a RedHat s
 4. the stepfunction will take care of the symbol building process, once it's done the forensic solution will be able to support RHEL8
 
 
-## Useful commands
+## Useful Commands Reference
 
--   `npm run all` Builds all necessary components
--   `cdk deploy ForensicSolutionStack` Deploys VPC and Forensic Stack in forensic account
--   `cdk deploy ForensicImageBuilderStack` Builds and deploys Image builder pipeline
--   `npm run all` Builds all necessary components
--   `npm run watch` Watches for changes and compile
--   `npm run test` Performs the jest unit tests
--   `cdk diff` Compares deployed stack with current state
--   `cdk synth` Emits the synthesized CloudFormation template
--   Steps to build the Forensic Stack to be deployed in Forensic AWS Account
-    -   `export STACK_BUILD_TARGET_ACCT=forensicAccount` - Sets the environment variable as forensic Account to build the necessary CDK CFN templates for deploying forensic stack
-    -   `cdk synth -c account=<<Forensic AWS Account>> -c region=ap-southeast-2` build the necessary CDK CFN templates for deploying forensic stack
--   Steps to build the Forensic Stack to be deployed in SecurityHub AWS Account
-    -   `export STACK_BUILD_TARGET_ACCT=securityHubAccount` - Sets the environment variable as SecurityHubAccount Account to build the necessary CDK CFN templates for deploying SecurityHub stack
-    -   `cdk synth -c account=<<SecuirtyHub AWS Account>> -c region=ap-southeast-2` Build the necessary CDK CFN templates for deploying SecurityHub stack
--   Steps to deploy the Forensic Stack in Forensic AWS Account
-    -   `export STACK_BUILD_TARGET_ACCT=forensicAccount` - Sets the environment variable as forensic Account to build the necessary CDK CFN templates for deploying forensic stack
-    -   `cdk deploy --all -c account=<<Forensic AWS Account>> -c region=ap-southeast-2 --require-approval=never -c secHubAccount=<<SecuirtyHub AWS Account>>` Deploy the necessary CDK CFN templates for deploying Forensic Solutions stack
--   Steps to deploy the Forensic Stack in SecurityHub AWS Account
-    -   `export STACK_BUILD_TARGET_ACCT=securityHubAccount` - Sets the environment variable as SecurityHubAccount Account to build the necessary CDK CFN templates for deploying SecurityHub stack
-    -   `cdk deploy --all -c account=<<SecuirtyHub AWS Account>> -c region=ap-southeast-2 --require-approval=never -c forensicAccount=<<Forensic AWS Account>>` Deploy the necessary CDK CFN templates for deploying SecurityHub stack
+### Core Build Commands
+- `npm run all` - Builds all necessary components
+- `npm run watch` - Watches for changes and compiles
+- `npm run test` - Performs the jest unit tests
+- `npm run build-lambda` - Builds Lambda functions
+
+### CDK Commands
+- `cdk init` - Creates a new, empty CDK project
+- `cdk synth` - Emits the synthesized CloudFormation template
+- `cdk diff` - Compares deployed stack with current state
+- `cdk deploy ForensicSolutionStack` - Deploys VPC and Forensic Stack in forensic account
+- `cdk deploy ForensicImageBuilderStack` - Builds and deploys Image builder pipeline
+- `cdk destroy --all` - Removes all deployed stacks
+
+### Environment Setup Shortcuts
+- **Forensic Account Setup**:
+  bash
+ export STACK_BUILD_TARGET_ACCT=forensicAccount
+ export AWS_REGION=us-east-1  # Replace with your target region
+ 
+
+- **SecurityHub Account Setup**:
+  bash
+ export STACK_BUILD_TARGET_ACCT=securityHubAccount
+ export AWS_REGION=us-east-1  # Replace with your target region
+
+
+For detailed deployment commands, refer to the deployment sections above.
+
+## Troubleshooting
+
+### Common Deployment Issues
+
+#### CDK Bootstrap Errors
+If you encounter errors related to CDK bootstrap during deployment:
+- Ensure both Forensic and SecurityHub accounts are properly bootstrapped with CDK v2
+- Run `cdk bootstrap aws://ACCOUNT-NUMBER/REGION` in each account
+- Verify bootstrap version with `aws cloudformation describe-stacks --stack-name CDKToolkit`
+
+#### Permission Issues
+If you encounter "Access Denied" errors:
+- Verify your AWS credentials have sufficient permissions
+- Ensure cross-account roles are properly configured
+- Check that the applicationAccounts list in cdk.json is correctly populated
+
+#### VPC Configuration Problems
+- When using an existing VPC, ensure it has the necessary subnets and routing configuration
+- Verify that the VPC ID in cdk.json is correct and exists in the specified region
+- Check that the VPC has connectivity to AWS services required by the solution
+
+#### EKS Cluster Access Issues
+- Verify that the forensic account has proper RBAC permissions to access the EKS clusters
+- Ensure aws-auth ConfigMap is properly configured to allow access from the forensic role
+- Check that the EKS cluster API endpoint is accessible from the forensic VPC
+
+### Validation Steps
+
+After deployment, verify your installation with these steps:
+
+1. Check that all CloudFormation stacks deployed successfully
+2. Verify that the SecurityHub custom action appears in the SecurityHub console
+3. Test the forensic workflow by triggering a test finding in SecurityHub
+4. Confirm that the Step Functions workflow executes correctly
+5. Verify that forensic artifacts are properly stored in the designated S3 bucket
 
 ---
 
